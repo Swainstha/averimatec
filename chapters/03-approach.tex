@@ -294,7 +294,7 @@ For large-scale index construction across hundreds or thousands of claims, all t
 \label{fig:rag}
 \end{figure}
 
-We have a dual RAG system where different retrieval methods are used to retrieve different information from different sources. For retrieving information for the claim text Splade and BGE are used and the information is retrieved from the text related text documents based on the claim text, its paraphrases and the fact checking question if available. Different queries are built for splade and BGE retrieval systems.
+We have a dual RAG system as shown in Figure \ref{fig:rag} where different retrieval methods are used to retrieve different information from different sources. For retrieving information for the claim text Splade and BGE are used and the information is retrieved from the text related text documents based on the claim text, its paraphrases and the fact checking question if available. Different queries are built for splade and BGE retrieval systems.
 
 Similarly for image related retrievals, we have the claim images, their corresponding captions  and fact checking question if available . The claim Image, caption and the question is used to retreive the related text and image documents from the image related documents  given in the dataset and also from the other source which was retrieved using Reverse image search using Google API using the LongCLIP retreival.
 
