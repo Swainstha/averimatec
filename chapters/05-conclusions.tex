@@ -1,0 +1,57 @@
+\chapter{Conclusions}
+\label{ch:conclusion}
+
+This thesis presented MM\_Checker, a hybrid multimodal retrieval-augmented pipeline for automated fact-checking of image-text claims. The system combines sparse lexical retrieval (SPLADE), dense semantic retrieval (BGE), and long-context visual retrieval (LongCLIP) with post-retrieval refinement stages (cross-encoder reranking and MMR diversification) to retrieve evidence from a multimodal knowledge store. A Vision-Language Model (Qwen3-VL-8B-Instruct) then generates verification questions, extracts answers from retrieved evidence, and produces grounded verdicts with justifications. The pipeline was evaluated on the AVerImaTeC shared task benchmark, a multimodal fact verification challenge containing real-world claims from professional fact-checking websites.
+
+\section{Answers to Research Questions}
+
+\subsection*{RQ1: How do the individual retrieval modalities and post-retrieval stages contribute to downstream fact-checking performance?}
+
+The incremental ablation study demonstrated that each retrieval component provides distinct and complementary contributions. SPLADE alone outperforms BGE on evidence score (0.34 vs.\ 0.24), confirming the importance of lexical matching for fact-checking where exact entity overlap is critical. The most impactful modality addition is LongCLIP, which improves evidence score by 29\% over standard CLIP (0.40 vs.\ 0.31) by enabling long-context visual grounding. Among post-retrieval stages, MMR diversification provides the largest single-stage gain (+5 percentage points on verdict score), demonstrating that evidence diversity is more important than raw relevance for downstream VLM reasoning. The full pipeline (SPLADE+BGE+LongCLIP+Cross-Encoder+MMR) yields a cumulative 32\% improvement in evidence score over the SPLADE-only baseline.
+
+\subsection*{RQ2: How does iterative question-answer generation compare to single-pass QA generation?}
+
+Single-pass QA generation substantially outperforms iterative generation across all metrics. On the validation set, single-pass achieves a verdict score of 0.81 compared to 0.72 for iterative generation---an improvement of 9 percentage points. This advantage stems from the VLM's ability to maintain contextual consistency when generating all questions and answers in a single coherent pass. The iterative approach suffers from error propagation: poor early questions lead to irrelevant evidence retrieval, which degrades subsequent question generation. On the test set, the single-pass approach with in-context learning achieves our best submission scores (question: 0.622, evidence: 0.312, verdict: 0.327, justification: 0.297).
+
+\subsection*{RQ3: What is the effect of in-context learning on question generation quality and overall pipeline performance?}
+
+In-context learning has a context-dependent effect that reveals important insights about evaluation reliability. For iterative generation, ICL is unambiguously beneficial: question score nearly doubles from 0.18 to 0.34, with corresponding improvements across all downstream metrics. For single-pass generation, ICL reduces validation verdict accuracy (0.81 to 0.77) but improves test set performance across all metrics (+13\% verdict, +13\% evidence, +12\% justification). This paradox reveals that high validation accuracy without ICL is partially attributable to majority-class bias exploited by unconstrained reasoning on the imbalanced validation set. ICL introduces structural constraints that reduce this bias, producing lower but more honest validation scores and better generalization to unseen data.
+
+\subsection*{RQ4: How does the proposed pipeline compare to state-of-the-art systems?}
+
+On the validation set, our system achieves the highest verdict score (0.81) among all participating teams, outperforming the first-place HUMANE system (0.6447) by over 16 percentage points. On the test set, our system outperforms the official baseline across all metrics and achieves competitive evidence and justification scores relative to systems using proprietary MLLMs (GPT-5.1, Gemini-2.5-Pro). The evidence score gap (0.312 vs.\ 0.536 for HUMANE) highlights that retrieval quality---not model size---is the primary differentiator. Notably, our entire pipeline runs on a single open-source 8B-parameter VLM on one A100 GPU, demonstrating that well-designed retrieval can partially compensate for smaller reasoning models.
+
+\section{Key Findings}
+
+Several cross-cutting findings emerge from this work:
+
+\begin{itemize}
+    \item \textbf{Retrieval is the bottleneck, not reasoning.} Evidence retrieval consistently scores lowest across all systems, including ours. Each retrieval improvement (LongCLIP, cross-encoder, MMR) propagates to all downstream metrics, confirming that investing in retrieval quality yields the highest returns.
+    
+    \item \textbf{Evidence diversity outweighs raw relevance.} MMR diversification produced the largest single-stage gain in the pipeline. Providing the VLM with non-redundant, complementary evidence is more effective than providing the top-$K$ most relevant but potentially redundant passages.
+    
+    \item \textbf{Long-context visual retrieval is essential for multimodal claims.} Standard CLIP's 77-token text limit makes it unsuitable for fact-checking; LongCLIP's ability to process longer textual descriptions enables meaningful visual-semantic matching against knowledge store documents.
+    
+    \item \textbf{Small, imbalanced validation sets produce misleading signals.} The 0.81 to 0.327 val-to-test verdict gap demonstrates that development on small datasets with extreme class imbalance (95\% Refuted) can inflate perceived performance through implicit majority-class bias rather than genuine reasoning.
+    
+    \item \textbf{Open-source VLMs are competitive when paired with strong retrieval.} Despite using a model $10\times$--$100\times$ smaller than proprietary alternatives, our system achieves competitive downstream scores, confirming that retrieval pipeline design is a viable path to strong fact-checking performance without commercial API dependence.
+\end{itemize}
+
+\section{Future Directions}
+\label{sec:conclusions:future}
+
+Several directions could address the limitations identified in this work:
+
+\begin{itemize}
+    \item \textbf{Scaling the reasoning component.} Replacing Qwen3-VL-8B with larger open-source VLMs (e.g., 32B or 72B parameter variants) could improve question generation diversity and multi-hop reasoning, particularly for claims requiring complex temporal or causal inference---the category where our VLM reasoning errors occurred.
+    
+    \item \textbf{Adaptive retrieval routing.} Rather than applying all three retrievers uniformly, a learned routing mechanism could predict which retrieval modalities are most relevant for a given claim type, reducing computational cost while maintaining coverage.
+    
+    \item \textbf{Dynamic knowledge stores.} The current evaluation assumes a fixed, pre-constructed knowledge store. Extending the pipeline to perform real-time web retrieval would address knowledge store coverage gaps---the failure mode where required evidence simply does not exist in the collection.
+    
+    \item \textbf{Verdict calibration.} The val-to-test generalization gap suggests that verdict predictions could benefit from post-hoc calibration or label-balanced sampling during prompt construction to reduce majority-class bias.
+    
+    \item \textbf{Cross-lingual retrieval.} Many claims in the AVerImaTeC dataset originate from non-English sources (particularly Hindi and regional Indian languages). Integrating multilingual retrieval models could address the vocabulary mismatch failures identified in the error analysis, where colloquial or regional language terms prevent effective matching.
+    
+    \item \textbf{Iterative retrieval with early stopping.} A hybrid approach that performs iterative retrieval but stops early when sufficient evidence is found could combine the theoretical advantages of iterative refinement with the practical benefits of single-pass efficiency, potentially avoiding the error propagation problem.
+\end{itemize}

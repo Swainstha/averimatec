@@ -1,0 +1,58 @@
+\chapter{Introduction}
+\label{ch:intro}
+
+\section{Background and Motivation}
+\label{sec:intro:background}
+\noindent
+At the dawn of the twenty-first century, a profound transformation began to unfold, one that would build upon and ultimately surpass the initial boom of the internet. Social media emerged as a powerful connective force, dissolving geographical boundaries and enabling individuals across the globe to share ideas, opinions, images, and news in real time. These platforms did more than facilitate communication; they amplified public voices, reshaping how information is created, disseminated, and consumed.
+
+This transformation has been accelerated by unprecedented access to the internet. With global connectivity now reaching approximately 5.66 billion users, social networks and digital news platforms have witnessed an explosive growth of multimodal content, particularly the fusion of text and imagery. Today's information is no longer conveyed through words alone; it is increasingly visual, immediate, and emotionally compelling.
+
+However, this surge in engagement and information flow has led to a parallel and deeply concerning phenomenon: the rapid proliferation of misinformation. No longer confined to misleading text, modern misinformation frequently leverages images to fabricate authenticity and enhance false credibility. This tactic exploits a well-documented cognitive bias—humans are naturally inclined to trust visual evidence more readily than textual claims. As a result, deceptive content can spread quickly, persuasively, and on a massive scale.
+
+In response, social media companies and news organizations have implemented manual fact-checking processes to curb the spread of false information. While effective in isolated cases, these approaches are fundamentally limited. The sheer volume, velocity, and diversity of content being generated daily far exceed the capacity of human verification alone. Consequently, manual fact-checking struggles to scale in an ecosystem driven by instant sharing and viral dissemination.
+
+This growing imbalance between information production and verification underscores an urgent need for automated verification systems. Such systems are essential not only to detect and mitigate misinformation efficiently, but also to preserve the integrity of digital information ecosystems in an era where trust itself has become increasingly fragile.
+
+
+\section{Objectives}
+\label{sec:intro:objectives}
+
+The primary objective of this thesis is to develop and evaluate a hybrid multimodal retrieval-augmented pipeline for automated fact-checking of image-text claims. Given a claim consisting of text and an associated image, the system must retrieve relevant evidence from a multimodal knowledge store, generate verification questions and answer them, and produce a grounded verdict with justification.
+
+To systematically evaluate the proposed approach, we formulate the following research questions:
+
+\begin{description}
+    \item[RQ1] How do the individual retrieval modalities (SPLADE, BGE, LongCLIP) and post-retrieval stages (cross-encoder reranking, MMR diversification) contribute to downstream fact-checking performance?
+    \item[RQ2] How does iterative question-answer generation compare to a retreival first, single-pass QA generation in terms of evidence quality and verdict accuracy?
+    \item[RQ3] What is the effect of in-context learning on question generation quality and overall pipeline performance?
+    \item[RQ4] How does the proposed pipeline compare to state-of-the-art systems on the AVerImaTeC shared task?
+\end{description}
+
+\section{Approach and Contributions}
+\label{sec:intro:approach}
+
+We address the problem by designing an end-to-end multimodal fact-checking pipeline that integrates hybrid evidence retrieval with Vision-Language Model (VLM) reasoning. The pipeline operates in three stages: (1)~hybrid multimodal retrieval combining sparse lexical (SPLADE), dense semantic (BGE), and long-context visual (LongCLIP) retrievers, fused via Reciprocal Rank Fusion and refined through cross-encoder reranking and MMR diversification; (2)~VLM-driven question generation and answer extraction, implemented in both iterative and single-pass variants with optional BM25-based in-context learning; and (3)~grounded verdict prediction and justification generation. The entire pipeline runs on a single open-source 8B-parameter VLM (Qwen3-VL-8B-Instruct) without reliance on proprietary APIs.
+
+The specific contributions of this thesis are:
+
+\begin{itemize}
+    \item A hybrid multimodal retrieval architecture that combines three complementary retrieval modalities with post-retrieval refinement, demonstrating that LongCLIP provides a 29\% improvement in evidence score over standard CLIP and that MMR diversification yields the largest single-stage gain in verdict accuracy.
+    \item A systematic comparison of iterative versus single-pass QA generation strategies for retrieval-augmented fact-checking, showing that single-pass generation outperforms iterative approaches by avoiding error propagation.
+    \item An empirical analysis of in-context learning effects that reveals a generalization gap: ICL reduces validation accuracy but improves test performance, exposing majority-class bias in small imbalanced evaluation sets.
+    \item A competitive open-source fact-checking system evaluated on the AVerImaTeC shared task, achieving the highest validation verdict score among all teams while demonstrating competitive test-set performance using significantly fewer computational resources than proprietary MLLM-based systems.
+\end{itemize}
+
+\section{Outline}
+\label{sec:intro:outline}
+
+
+The remainder of this thesis is organized as follows:
+
+\textbf{Chapter~\ref{ch:relatedWork}} reviews related work in automated fact-checking, multimodal misinformation detection, retrieval-augmented generation, and the specific retrieval models (SPLADE, BGE, LongCLIP) that form the basis of our pipeline. This establishes the theoretical and methodological context for our approach.
+
+\textbf{Chapter~\ref{ch:approach}} presents the proposed pipeline in detail, covering the hybrid retrieval architecture, indexing strategies, question generation approaches (iterative and single-pass), answer extraction, and verdict prediction with justification generation.
+
+\textbf{Chapter~\ref{ch:eval}} describes the experimental evaluation, including the AVerImaTeC dataset, evaluation methodology, and results organized by research question. This chapter also includes a discussion of findings, qualitative examples illustrating success and failure cases, and an error analysis identifying systemic failure patterns.
+
+\textbf{Chapter~\ref{ch:conclusion}} summarizes the key findings, answers each research question, and discusses future directions for multimodal fact-checking research.

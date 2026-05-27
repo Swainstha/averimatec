@@ -1,0 +1,726 @@
+\chapter{Approach}
+\label{ch:approach}
+
+\section{Overview}
+
+\noindent
+    Automated fact-checking has become increasingly important due to the rapid spread of misinformation on digital platforms. The rise of multimodal claims, which combine text and images, introduces additional challenges, as images may be misleading, manipulated, or used out of context. Effective verification therefore requires analyzing both modalities, their relationship, and their connection to real-world events.
+    
+    This thesis addresses the problem of multimodal fact verification, where a claim consists of both textual and visual content, and the objective is to retrieve relevant evidence for verification. Compared to traditional text-only fact-checking, multimodal verification introduces additional complexity due to the need to analyze cross-modal relationships between the claim text and associated image.
+
+
+The system is designed to decompose the verification task into smaller sub problems including question generation, evidence retrieval from knowledge store, image understanding, evidence ranking, answer generation, verdict and justification generation based on the retrieved evidence for the questions.
+
+\section{Fact checking Pipeline Overview}
+
+There are some important keywords that will be used throughout this section which were described in ~\citet{Cao2025May}.
+\begin{itemize}
+\item Claim Text: The text that needs to be fact checked
+\item Claim Image: The image that comes along with the claim text that needs to be fact checked
+    \item Question: The generated essential questions for verifying the image-text claim.
+    \item Evidence: The retrieved textual and image information from the knowledge store based on the claim text, claim image and question
+    \item Answer: The answer to the question based on the evidences retrieved
+    \item Verdict: The predicted veracity label of the claim
+    \item Justification: A textual justification that explains how a verdict can be reached on the basis of the evidence found
+\end{itemize}
+
+
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{images/simplePipeline.pdf}
+\caption{Overview of Fact Checking pipeline. The yellow sections are the inputs, green section is the retrieval method and blue sections are for LLM/VLM reasoning and generation}
+\label{fig:simplepipeline}
+\end{figure}
+
+Given a claim text and a claim image, the pipeline generates a series of questions which help to fact check the claim, Based on the question, the pipeline retrieves evidences related to the claim text and claim image from a knowledge store and generates an answer for the question. This question answer generation goes on for several iterations, and based on these question-answer pairs, a verdict is generated. Based on the verdict generated and on the question-answer pairs a textual justification is generated which explains how the QA pairs led to the generated verdict.
+
+\section{Information Retrieval Strategies}
+
+    There are several key challenges that needs to addressed in this context which are as follows
+
+\begin{itemize}
+    \item \textbf{Long and noisy evidence sources} - Real-world evidence varies from short snippets to lengthy documents, making efficient retrieval difficult.
+    \item \textbf{Entity ambiguity and identity mismatch} - The same image may be associated with multiple conflicting narratives, making it difficult to verify which one is correct and require careful disambiguation across sources.
+    \item \textbf{Image reuse and miscontextualization} - Images can be often reused across unrelated claims, leading to false associations that cannot be detected with text alone.
+    \item \textbf{Heterogenous information signals} - Relevant evidence may be distributed across textual content, images, OCR text, and metadata, requiring unified multimodal retrieval strategies.
+\end{itemize}
+
+To address these challenges, this thesis work proposes a hybrid multimodal retrieval strategy that combines:
+\begin{itemize}
+    \item Dense semantic retrieval
+    \item Sparse lexical retrieval
+    \item Image-to-text alignment
+    \item Multimodal evidence fusion
+\end{itemize}
+
+\noindent
+Evidence retrieval is a fundamental component of multimodal fact-checking. Given a textual claim and an associated image, the goal is to retrieve relevant textual and visual evidence for verification. Since misinformation often combines misleading text with reused or misattributed images, relying on only a single modality is insufficient.
+
+To address this challenge, we propose a hybrid multimodal retrieval strategy that combines dense semantic retrieval, sparse lexical retrieval, and image–text alignment. This approach enables effective retrieval across heterogeneous information sources, improving both evidence coverage and retrieval accuracy for multimodal fact-checking.
+
+
+\subsection{Dense Semantic + Sparse Lexical Retrieval using BGE}
+
+Dense retrieval encodes text into continuous vector representations, enabling semantic matching beyond exact keywords. This work uses the \textit{BAAI/bge-large-en-v1.5} model as the primary dense retriever, allowing retrieval of semantically related evidence even when wording differs significantly. For example, a claim about “a 101-year-old woman giving birth” can retrieve evidence discussing “extreme-age pregnancy hoaxes” despite lexical differences.
+
+Queries for BGE are constructed using:
+\begin{itemize}
+    \item The original claim text
+    \item Generated verification questions if available
+\end{itemize}
+
+\subsection{Sparse Lexical Retrieval using Splade}
+To complement dense retrieval, the system employs SPLADE, a sparse neural retrieval model that combines lexical matching with learned term expansion. SPLADE bridges traditional sparse methods such as BM25 with modern dense retrieval, providing effective and computationally efficient sparse representations ~\cite{Formal2021Sep}.
+
+Fact-checking tasks frequently depend on:
+\begin{itemize}
+    \item Exact entity matching
+    \item Numerical consistency
+    \item Keyword-level verification
+\end{itemize}
+
+Dense retrieval alone may fail to prioritize evidence containing critical factual details such as names, dates, locations or quoted statements.
+
+SPLADE addresses this by emphasizing important lexical features while still benefiting from neural expansion.
+
+SPLADE queries are constructed from:
+\begin{itemize}
+    \item claim text
+    \item Paraphrases of the claim text if available
+    \item generated verification questions if available
+\end{itemize}
+
+\subsection{Image-to-Text Retrieval using LongCLIP}
+
+Textual retrieval alone is insufficient for multimodal misinformation because images are frequently reused in unrelated or misleading contexts. To address this issue, this work incorporates LongCLIP for image-based retrieval.
+
+Standard CLIP is limited to 77 tokens, with an effective context length of about 20 tokens, making it less effective for long contextual evidence and fine-grained attribute interactions. LongCLIP extends CLIP-based image–text alignment to support longer textual contexts, improving retrieval for descriptive evidence, image-associated narratives, and multimodal misinformation through an extended text encoder and dual-alignment fine-tuning.
+
+By using Knowledge-Preserved stretching and primary component matching, LongCLIP improves recall by approximately 25\% on long-text retrieval tasks and 6\% on traditional short-text retrieval, all while maintaining original zero-shot classification performance~\cite{Zhang2024Mar}.
+
+
+\section{Indexing the Knowledge Store}
+
+The knowledge store in AVerImaTeC contains documents of highly variable length, ranging from short social media posts of a few dozen words to full-length news articles exceeding tens of thousands of words. Encoding entire documents as single vectors leads to information dilution, where the embedding averages over large spans of text and loses the fine-grained details needed for fact verification. Conversely, encoding at the sentence level produces fragments that lack sufficient context to be meaningfully matched against a claim. To address this, each retrieval system adopts a chunking strategy tailored to its encoding model before building its respective index.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{images/KnowledgeStore.pdf}
+\caption{Knowledge Store Setup with different embeddings from different sources. The orange sections are the different sources of documents, blue sections are related to chunking, encoding and normalization, green sections are for building the index and the purple sections are the final indexes for specific retrieval methods}
+\label{fig:knowledgestore}
+\end{figure}
+
+The three retrieval systems — BGE, SPLADE, and LongCLIP — differ in their chunking granularity, encoding methodology, and index structure. Table~\ref{tab:chunking_comparison} summarizes these differences.
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison of chunking, encoding, and indexing across the three retrieval systems.}
+\label{tab:chunking_comparison}
+\begin{tabular}{lccc}
+\hline
+\textbf{Aspect} & \textbf{BGE} & \textbf{SPLADE} & \textbf{LongCLIP} \\
+\hline
+Chunk size (words) & 256 & 200 & 248 \\
+Overlap (words) & 50 & 0 & 50 \\
+Embedding type & Dense (1024-d) & Sparse (vocab-sized) & Dense (768-d) \\
+Index structure & FAISS & Inverted index & FAISS \\
+Modality & Text & Text & Text + Images \\
+Similarity metric & Cosine (via IP) & Dot product & Cosine (via IP) \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Chunking Strategies}
+
+All three retrieval systems segment documents into smaller chunks before encoding, but each uses different chunk sizes and overlap settings optimized for its respective model.
+
+\subsubsection{BGE Chunking}
+
+Documents are split into fixed size chunks of 256 words (or roughly 1024 characters) with an overlap of 50 words between consecutive chunks. The larger chunk size allows the dense encoder to capture broader contextual relationships, while the overlap ensures that relevant passages near chunk boundaries are represented in at least one chunk. For documents shorter than 256 words, the entire document is treated as a single chunk.
+
+Fixed size chunking was used instead of semantic chunking for the BGE retriever. While semantic chunking, which divides documents into semantically coherent segments, has gained popularity in Retrieval-Augmented Generation (RAG) systems, recent empirical evidence suggests that its benefits do not justify the additional computational cost ~\cite{Qu2024Oct}. The study concluded that the impact of chunking strategy was frequently overshadowed by other factors such as embedding quality, and that fixed-size chunking remains a more efficient and reliable choice for practical applications. Given that our knowledge store consists of real-world news articles and web documents, fixed-size chunking with overlap was adopted as the more robust and computationally efficient strategy.
+
+Given a document $d$ consisting of a word sequence $w_1, w_2, \ldots, w_n$, the $i$-th chunk is defined as:
+
+\begin{equation}
+    c_i = (w_{s_i}, w_{s_i+1}, \ldots, w_{s_i + L - 1}), \quad s_i = i \cdot (L - O)
+\end{equation}
+where $L = 256$ is the chunk size, $O = 50$ is the overlap, and the process continues until $s_i + L \geq n$.
+
+\subsubsection{SPLADE Chunking}
+
+SPLADE uses smaller, non-overlapping chunks of 200 words. Since SPLADE operates at the lexical level and produces sparse term-weight vectors, smaller chunks are preferable because they concentrate the important keywords within a tighter context window. Overlap is not used because SPLADE's learned term expansion mechanism already captures related terms that may appear in adjacent chunks, reducing the risk of missing boundary information.
+
+\subsubsection{LongCLIP Chunking}
+
+LongCLIP chunks text at 248 words with a 50-word overlap. The chunk size is chosen to align with LongCLIP's extended text encoder capacity of 248 tokens, ensuring that each chunk can be fully processed without truncation. The 50-word overlap provides boundary coverage while keeping the total number of chunks manageable. In addition to text chunks, LongCLIP also processes images directly from the knowledge store's image collection, encoding them alongside text into a shared embedding space.
+
+\subsection{Encoding Methods}
+
+Each retrieval system uses a fundamentally different encoding approach, producing representations that capture complementary aspects of the evidence.
+
+\subsubsection{BGE Dense Encoding}
+
+BGE-large-en-v1.5 is a sentence transformer that produces 1024-dimensional dense embeddings optimized for English text similarity tasks. The model is loaded via the SentenceTransformers framework and, when GPU resources are available, operates in half-precision (FP16) mode to reduce memory consumption without significant loss in embedding quality.
+
+The encoding process maps each chunk $c_i$ to a dense vector $\mathbf{e}_i \in \mathbb{R}^{1024}$:
+
+\begin{equation}
+    \mathbf{e}_i = f_{\text{BGE}}(c_i)
+\end{equation}
+where $f_{\text{BGE}}$ denotes the BGE encoder. All embeddings are L2-normalized after encoding so that the inner product between any two normalized vectors is equivalent to their cosine similarity:
+
+\begin{equation}
+    \text{cos\_sim}(\mathbf{e}_i, \mathbf{e}_j) = \frac{\mathbf{e}_i \cdot \mathbf{e}_j}{\|\mathbf{e}_i\| \cdot \|\mathbf{e}_j\|} = \mathbf{e}_i \cdot \mathbf{e}_j \quad \text{(when } \|\mathbf{e}_i\| = \|\mathbf{e}_j\| = 1\text{)}
+\end{equation}
+
+This normalization is critical because it allows the use of inner product search in FAISS, which is computationally more efficient than explicit cosine similarity computation. Encoding is performed in batches of up to 512 chunks when using FP16 on GPU, or 128 chunks on CPU, to maximize throughput.
+
+\subsubsection{SPLADE Sparse Encoding}
+
+Unlike dense encoders, SPLADE produces sparse representations over the entire BERT vocabulary (approximately 30,522 tokens). For each input chunk, the SPLADE model outputs logits from a masked language model head, which are then transformed through a ReLU activation followed by a logarithmic scaling:
+
+\begin{equation}
+    \mathbf{s} = \log(1 + \text{ReLU}(\mathbf{z}))
+\end{equation}
+where $\mathbf{z} \in \mathbb{R}^{T \times V}$ are the raw logits over the vocabulary $V$ for each of the $T$ token positions. A max-pooling operation over the sequence dimension produces a single sparse vector $\mathbf{s} \in \mathbb{R}^{V}$:
+
+\begin{equation}
+    s_j = \max_{t=1}^{T} \log(1 + \text{ReLU}(z_{t,j}))
+\end{equation}
+where $s_j$ represents the importance weight of vocabulary term $j$. The ReLU ensures sparsity by zeroing negative activations, while the logarithm normalizes the scores. Only non-zero entries are stored, resulting in a compact sparse dictionary mapping token IDs to their activation values. This representation captures both the original terms in the text and semantically related expanded terms that the model has learned to activate.
+
+\subsubsection{LongCLIP Dual-Modality Encoding}
+
+LongCLIP encodes both text and images into a shared 768-dimensional embedding space, enabling cross-modal similarity computation. The text encoder processes chunks of up to 248 tokens (significantly longer than standard CLIP's 77-token limit), while the image encoder processes raw images through a Vision Transformer (ViT-L/14) backbone ~\cite{Zhang2024Mar}.
+
+For text chunks, the encoding is:
+\begin{equation}
+    \mathbf{t}_i = f_{\text{text}}(c_i) \in \mathbb{R}^{768}
+\end{equation}
+
+For images from the knowledge store, the encoding is:
+\begin{equation}
+    \mathbf{v}_j = f_{\text{image}}(I_j) \in \mathbb{R}^{768}
+\end{equation}
+
+Both text and image embeddings are L2-normalized, so that cosine similarity between any text-text, image-image, or image-text pair can be computed via inner product. Text chunks are encoded in batches of 64, and images are encoded in batches of 32 to accommodate the larger memory footprint of the vision encoder.
+
+\subsection{Index Construction}
+
+The encoded representations are organized into index structures optimized for each encoding type.
+
+\subsubsection{FAISS Indices for BGE and LongCLIP}
+
+Both BGE and LongCLIP produce dense vectors and use FAISS (Facebook AI Similarity Search) for efficient nearest-neighbor retrieval. A separate FAISS index is constructed for each claim in the dataset, scoped to the documents in that claim's knowledge store. This per-claim indexing ensures that retrieval does not mix evidence across unrelated claims.
+
+The choice of FAISS index type depends on the collection size:
+
+\begin{itemize}
+    \item \textbf{Flat index (IndexFlatIP):} For collections with 10,000 or fewer vectors (BGE) or 5,000 or fewer vectors (LongCLIP), a flat inner product index performs exhaustive search with $O(n)$ complexity but guarantees exact results.
+    \item \textbf{IVF index (IndexIVFFlat):} For larger collections, an Inverted File index partitions the vector space into $\sqrt{n}$ Voronoi cells (up to 1,000 for BGE or 500 for LongCLIP) using k-means clustering. At query time, only the vectors in the nearest cells are searched, reducing complexity to $O(\sqrt{n})$.
+\end{itemize}
+
+Both index types use inner product as the similarity metric, which combined with L2-normalized embeddings is equivalent to cosine similarity search.
+
+For LongCLIP, two separate FAISS indices are maintained per claim: one for image embeddings and one for text embeddings. This separation allows the system to perform image-to-image, image-to-text, and text-to-text retrieval independently, and to control the contribution of each modality during result fusion.
+
+\subsubsection{Inverted Index for SPLADE}
+
+SPLADE's sparse representations are stored in an inverted index structure, mirroring the approach used in traditional information retrieval systems. For each vocabulary term that has a non-zero activation in any chunk, the inverted index maintains a posting list of (chunk\_index, score) pairs:
+
+\begin{equation}
+    \text{InvIdx}[j] = \{(i, s_j^{(i)}) \mid s_j^{(i)} > 0\}
+\end{equation}
+where $s_j^{(i)}$ is the activation of term $j$ in chunk $i$. At query time, the query is encoded into a sparse representation using the same SPLADE model, and the relevance score for each candidate chunk is computed as the dot product between the query and chunk sparse vectors:
+
+\begin{equation}
+    \text{score}(q, c_i) = \sum_{j \in V} s_j^{(q)} \cdot s_j^{(i)}
+\end{equation}
+
+Because both query and chunk representations are sparse, only the terms present in both the query and the chunk contribute to the score, making retrieval efficient even over large vocabularies.
+
+\subsection{Query Construction}
+\label{ch:queryConstruction}
+
+Each retrieval system uses differently structured queries optimized for its encoding characteristics.
+
+\subsubsection{BGE Queries}
+
+BGE queries combine the claim text and verification question in a natural language format:
+
+\begin{verbatim}
+Claim: [claim text]
+Question: [verification question]
+\end{verbatim}
+
+The query is encoded using the same BGE model and normalized identically to the indexed chunks. The FAISS index returns the top-$k$ chunks ranked by inner product similarity.
+
+\subsubsection{SPLADE Queries}
+
+SPLADE queries are constructed differently from BGE queries. Since SPLADE operates at the lexical level and benefits from keyword-dense inputs, the queries are prefixed with fact-checking domain terms to activate relevant vocabulary expansions:
+
+\begin{verbatim}
+fact check claim verify truth context debunked:
+[claim text] [claim_text_paraphrases] [verification question]
+\end{verbatim}
+
+\subsubsection{LongCLIP Queries}
+
+LongCLIP queries encode the claim image directly through the vision encoder for image-to-text and image-to-image retrieval. For text-to-text retrieval within the LongCLIP index, the caption is encoded through the text encoder. The shared embedding space allows cross-modal matching, where a claim image can retrieve textually described evidence and vice versa.
+
+\subsubsection{Index Caching and Parallelization}
+
+Building indices for the entire knowledge store across all three systems is computationally intensive. To avoid redundant computation, each claim's index and associated metadata are serialized to disk:
+
+\begin{itemize}
+    \item \textbf{BGE:} A FAISS binary index file and a pickle file containing document metadata and embeddings.
+    \item \textbf{SPLADE:} A single pickle file containing the inverted index, chunk representations, and document metadata.
+    \item \textbf{LongCLIP:} A claim-specific directory containing separate FAISS indices for images and text, along with their respective metadata and embeddings stored as NumPy arrays.
+\end{itemize}
+
+On subsequent runs, the system checks for cached indices and loads them directly, bypassing the encoding step entirely.
+
+For large-scale index construction across hundreds or thousands of claims, all three systems support multi-GPU parallel processing. Multiple worker processes are spawned across available GPUs, each pulling claim IDs from a shared queue, building the index, and caching the result. This allows the full index construction to be distributed across all available hardware, significantly reducing the wall-clock time required for preprocessing.
+
+\section{Hybrid Multimodal Retrieval Augmented Generation}
+\label{ch:rag}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{images/NewNewRag.pdf}
+\caption{Hybrid Multimodal Retrieval Augmented Generation. The yellow sections are the inputs and red sections are the outputs of RAG. The purple sections are the different indexes for the specific retrieval methods}
+\label{fig:rag}
+\end{figure}
+
+We have a dual RAG system where different retrieval methods are used to retrieve different information from different sources. For retrieving information for the claim text Splade and BGE are used and the information is retrieved from the text related text documents based on the claim text, its paraphrases and the fact checking question if available. Different queries are built for splade and BGE retrieval systems.
+
+Similarly for image related retrievals, we have the claim images, their corresponding captions  and fact checking question if available . The claim Image, caption and the question is used to retreive the related text and image documents from the image related documents  given in the dataset and also from the other source which was retrieved using Reverse image search using Google API using the LongCLIP retreival.
+
+\subsection{Reciprocal Rank Fusion (RRF)}
+
+Different retrieval methods capture complementary relevance signals:
+\begin{itemize}
+    \item BGE captures semantic similarity,
+    \item SPLADE captures lexical relevance,
+    \item LongCLIP captures visual-semantic alignment.
+\end{itemize}
+
+The outputs from BGE, SPLADE, and LongCLIP retrieval are combined using Reciprocal Rank Fusion (RRF).
+
+Different retrieval methods produce scores on incompatible scales, causing some modalities to dominate during fusion. Reciprocal Rank Fusion (RRF) avoids this issue by combining results based on rank positions rather than raw scores, providing more balanced and robust multimodal retrieval across heterogeneous data sources ~\cite{RyanBogan2025Nov}.
+
+RRF assigns a score to every document based on its rank in each retrieval list using the formula:
+
+\begin{equation}
+    \text{RRF\_score}(d) = \sum_{r \in R} \frac{1}{k + \text{rank}_r(d)}
+\end{equation}
+where $k$ is a constant (commonly set to 60) that controls the influence of lower-ranked documents, $R$ is the set of retrieval lists, and $\text{rank}_r(d)$ is the rank of document $d$ in retrieval list $r$.
+
+This allows documents from different sources or search queries to be compared on a consistent scale.
+
+RRF accumulates the scores for documents that appear in more than one list. This ensures that documents found to be relevant across multiple "angles" of a query receive the highest priority in the final ranking ~\cite{Rackauckas2024Jan}.
+
+By fusing documents retrieved from various perspectives, RRF enables the system to provide answers that are more comprehensive and contextualized than traditional retrieval methods ~\cite{Rackauckas2024Jan}.
+
+\subsection{Cross-Encoder Reranking}
+
+While RRF is excellent at merging documents from different retrieval methods, it lacks deep semantic understanding of the query-document relationship. This is where Cross-Encoders shine — models like BGE-reranker which we have used in our work that score the actual interaction between query and text. However, they are computationally expensive and slow.
+
+Because processing every document in a large collection with a cross-encoder is computationally expensive, making them impractical for searching through an entire corpus in a single step. So we have used them as second-stage rerankers after RRF. The cross-encoder reorders the documents provided by RRF to produce a more accurate final ranking.
+
+The documents from the RRF output are passed to the BGE-reranker, which scores each query-document pair based on their semantic relevance. This allows the system to refine the ranking by considering deeper interactions between the claim and the evidence, ultimately improving the precision of the retrieved results.
+
+The cross-encoder typically uses a pretrained transformer, BGE-reranker in our case, as its backbone. The input is formatted by concatenating the query and the passage, separated by special tokens:
+
+Format : [CLS] query [SEP] passage [SEP]
+
+By feeding both pieces of text into the transformer at once, the model can apply full self-attention across all tokens in both the query and the document, allowing it to capture complex interactions and nuances between the two ~\cite{BibEntry2026May}.
+
+The model produces a relevance score (z) for the pair through the following steps:
+\begin{itemize}
+    \item \textbf{Contextual Representation:} The transformer processes the input and produces a representation for the [CLS] token in the final layer (T), which serves as a summary of the entire query-passage interaction.
+    \item \textbf{Linear Transformation:} This representation is passed through a final classification layer consisting of a weight matrix (W) and a bias (b).
+    \item \textbf{Calculation:} The score is calculated using the formula:
+        \begin{equation}
+            z = W \cdot T + b
+        \end{equation}
+\end{itemize}
+
+This enables fine-grained interaction between:
+\begin{itemize}
+    \item entities,
+    \item contextual relationships,
+    \item and factual statements.
+\end{itemize}
+
+The reranker significantly improves precision by filtering semantically related but factually irrelevant evidence.
+
+While cross-encoders are slower than the initial retrievers, the sources emphasize that they remain far more efficient than Large Language Models (LLMs) like GPT-4. In many scenarios, a traditional cross-encoder remains highly competitive with LLMs in terms of ranking quality while requiring significantly less time and computational cost ~\cite{Dejean2024Mar}.
+
+In our implementation, cross-encoders are only used to rerank the text documents retrieved by BGE and splade and not used for documents retrieved by LongCLIP. Since the BGE-reranker is a text only reranker, we have avoided its use for image related documents as they depend on the claim images rather than the claim text.
+
+\subsection{Maximum Marginal Relevance (MMR)}
+
+After reranking, the top 20 documents are further processed using Maximum Marginal Relevance (MMR) to ensure diversity in the retrieved evidence. 
+
+News datasets frequently contain:
+\begin{itemize}
+    \item duplicated reports,
+    \item syndicated articles,
+    \item near-identical passages,
+    \item conflicting narratives about the same event.
+\end{itemize}
+
+Without diversification, the final evidence set may contain redundant information from multiple sources.
+
+Maximal Marginal Relevance (MMR) is a method designed to balance query relevance with information novelty in text retrieval and summarization. Its primary goal is to reduce redundancy while maintaining the relevance of information provided to a user.
+
+The core idea behind MMR is the concept of "marginal relevance." A document or passage is considered to have high marginal relevance if it is highly relevant to the user's query but also has minimal similarity to the documents or passages that have already been selected.
+
+The MMR score is defined as:
+\begin{equation}
+    \text{MMR} = \arg\max_{d_i \in D \setminus S} \left[ \lambda \cdot \text{Sim}(d_i, q) - (1-\lambda) \cdot \max_{d_j \in S} \text{Sim}(d_i, d_j) \right]
+\end{equation}
+where $D$ is the set of all candidate documents, $S$ is the set of selected evidence documents, $q$ is the query, $\text{Sim}(d_i, q)$ measures the relevance of document $d_i$ to the query, $\text{Sim}(d_i, d_j)$ measures the similarity between two documents, and $\lambda$ controls the trade-off between relevance and diversity.
+
+The Lambda ($\lambda$) Parameter: This is a user-tunable value between 0 and 1 that controls the balance between relevance and diversity:
+\begin{itemize}
+    \item $\lambda=1$: At this setting, the system produces a standard ranked list based purely on relevance to the query. This often results in high redundancy, where many top results repeat the same information.
+    \item $\lambda=0$ (Maximal Diversity): This setting prioritizes diversity above all else, producing a ranking where each document is as different as possible from those already selected.
+    \item Intermediate values (e.g., 0.3 or 0.7): These values optimize a linear combination of both relevance and novelty.
+    \item Low $\lambda$ (e.g., 0.3): Acts like a ``floodlight,'' allowing users to sample the broad ``information space'' around a query to understand different facets of a topic.
+    \item High $\lambda$ (e.g., 0.7): Acts like a ``narrow beam,'' focusing the results on multiple, potentially overlapping documents that reinforce the most relevant information.
+\end{itemize}
+
+We have used $\lambda=0.5$ in our experiments to ensure a good balance between relevance and diversity, allowing the system to provide a comprehensive set of evidence while minimizing redundancy. This setting allows users to explore a wider range of perspectives and information related to the claim being fact-checked while being grounded with the query provided.
+
+This whole pipeline of evidence retrieval will be denoted as 'Evidence Retrieval using RAG' in the flow diagrams in next sections.
+
+\section {Iterative Question-Answer Generation}
+\label{section:iterative}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{images/IterativeQA.pdf}
+\caption{Iterative Question-Answer generation. The green sections are the retrieval methods, blue sections are for VLM based reasoning and generation, and yellow sections are the inputs to the VLMs}
+\label{fig:iterativeEvidenceRetrieval}
+\end{figure}
+The iterative question answer generation approach as shown in Figure ~\ref{fig:iterativeEvidenceRetrieval} follows a question generation, evidence retrieval and answer generation sequence for each question in a number of iterations.
+
+\subsection{Question Generation}
+
+Effective fact verification breaks a claim into smaller, checkable questions. Instead of verifying a complex multimodal claim all at once, the system verifies each assertion separately, improving accuracy and interpretability since misinformation often mixes true and false statements.
+
+The question generation module takes as input the claim text, associated claim images, and any previously accumulated question-answer pairs. It produces a set of candidate verification questions, each tagged as either text-related or image-related, using a Vision-Language Model (VLM) prompted with carefully structured instructions.
+
+\subsubsection{Question Types}
+
+The system generates two categories of verification questions:
+
+\begin{itemize}
+    \item \textbf{Text-related questions:} These target factual assertions in the claim text, such as dates, events, locations, names, and statistics. They are answered using textual evidence retrieved from the knowledge store. For example, given a claim about ``a 101-year-old woman giving birth,'' a text-related question might be: ``What is the maximum documented age for natural childbirth?''
+    \item \textbf{Image-related questions:} These target the visual content of the claim image, addressing what is depicted, whether the image has been reused or manipulated, and whether it matches the textual narrative. Each image-related question includes an image index specifying which claim image it refers to. For example: ``What is the original source and context of this photograph [IMG\_1]?''
+\end{itemize}
+
+The system is instructed to generate a mix of both types — typically two text-related and one image-related questions per iteration — to ensure that both modalities of the claim are adequately interrogated.
+
+\subsubsection{In-Context Learning for Question Generation}
+\label{subsection:icl}
+
+To guide the QA generation model toward producing high-quality verification questions, the system selects the top-5 most similar training claims as in-context learning (ICL) demonstrations. The selection uses dense semantic similarity via the \textit{all-MiniLM-L6-v2} sentence transformer:
+
+\begin{equation}
+    \text{sim}(c, c_j) = \frac{\mathbf{e}_c \cdot \mathbf{e}_{c_j}}{\|\mathbf{e}_c\| \cdot \|\mathbf{e}_{c_j}\|}
+\end{equation}
+
+where $\mathbf{e}_c$ and $\mathbf{e}_{c_j}$ are the sentence embeddings of the input claim and training claim $j$, respectively. At initialization, all training claim texts are pre-encoded and stored as a tensor of embeddings. At inference time, the input claim is encoded once, and cosine similarity is computed against all training embeddings using efficient batch operations:
+
+\begin{equation}
+    \text{top-}k = \text{argsort}_{j}(\text{sim}(c, c_j), \text{descending})[:5]
+\end{equation}
+
+For each selected training example, the system extracts the associated verification questions and formats them according to their type:
+
+\begin{itemize}
+    \item \textbf{Image-related questions} are prefixed with \texttt{**Image-related:**} and include an image index marker indicating which claim images they reference (e.g., \texttt{**Image Index:** 1,2.}).
+    \item \textbf{Text-related questions} are prefixed with \texttt{**Text-related:**} and contain only the question text.
+\end{itemize}
+
+The formatted examples are assembled into a structured ICL block:
+
+\begin{verbatim}
+Example Claim text 1: [similar claim text]
+Example Questions:
+**Text-related:** What is the origin of this event?
+**Image-related:** Who is depicted in this photograph? **Image Index:** 1.
+
+Example Claim text 2: [another similar claim]
+...
+\end{verbatim}
+
+These examples demonstrate the expected question format, depth, and diversity to the generation model without prescribing the exact content of the questions for the current claim.
+
+\subsubsection{Prompt Construction}
+
+The question generation prompt is assembled as a multi-turn message sequence sent to the VLM:
+
+\begin{enumerate}
+    \item \textbf{System message:} Defines the model's role as a fact-checking question generation system, specifies the exact number of questions to generate, and provides detailed formatting rules. The system message also enforces strict deduplication against previously asked questions.
+    \item \textbf{ICL examples (optional):} When ICL is enabled, the selected training examples are presented as user messages showing example claim texts and their corresponding verification questions. These serve as style and format guidance. 
+    \item \textbf{Final instruction:} Presents the actual claim text, any previously asked questions (to prevent repetition), the claim images encoded as base64, and a directive to generate the specified number of new questions.
+\end{enumerate}
+
+The VLM generates questions with a temperature of 0.5 to encourage diversity across iterations but be grounded on the given query. Complete prompt templates are provided in Appendix ~\ref{ch:appendix_question}.
+
+\subsubsection{Iterative Question Generation}
+
+Question generation operates within an iterative loop (default: 2 iterations) that progressively refines the verification coverage. In each iteration:
+
+\begin{enumerate}
+    \item The question generation module produces a batch of candidate questions (default 3), conditioned on all previously asked questions and their answers.
+    \item Valid questions are forwarded to the question answering module, which retrieves evidence and produces answers.
+    \item The question-answer pairs are appended to a cumulative context that is fed back to the question generator in the next iteration.
+\end{enumerate}
+
+This iterative approach allows the system to adapt its questioning strategy based on what has already been discovered. Early iterations tend to ask broad factual questions, while later iterations can target gaps or inconsistencies identified in the accumulated evidence. The cumulative context is explicitly passed to the question generator with instructions that previously asked questions must not be repeated, ensuring that each iteration explores new aspects of the claim.
+
+\subsection{Evidence Retrieval and Answer Generation}
+
+Once a set of verification questions has been generated, each question is independently processed through an evidence retrieval and answer generation pipeline. This pipeline connects the question to the hybrid retrieval system described in Sub-section~\ref{ch:rag}, retrieves relevant documents, generates an answer grounded in the retrieved evidence, and converts the question-answer pair into a declarative evidence statement suitable for downstream verdict prediction.
+
+\subsubsection{Image Captioning}
+\label{subsection:caption}
+Before evidence retrieval begins, each claim image is processed through a Vision-Language Model to generate a structured caption. These captions serve as textual proxies for the visual content, enabling text-text and text-image retrievals using LongCLIP.
+
+The captioning prompt instructs the model to produce two retrieval-focused fields:
+
+\begin{itemize}
+    \item \textbf{Caption:} A short factual description of the visible scene.
+    \item \textbf{Context:} A single phrase summarizing the scene context.
+\end{itemize}
+
+The caption is designed to be information-dense rather than verbose, prioritizing named entities, visible text, and distinctive visual features that are most useful for retrieval. Only directly visible content is described — the model is explicitly instructed not to speculate or infer.
+
+\subsubsection{Per-Question Evidence Retrieval}
+
+For each verification question, the retrieval system constructs queries tailored to the question type and dispatches them to the hybrid retrieval pipeline. The retrieval process proceeds as follows:
+
+\begin{enumerate}
+    \item \textbf{Query construction:} The claim text and the current verification question are combined into retriever-specific query formats (as described in ~\ref{ch:queryConstruction}). For image-related questions, the caption of the referenced claim image is also incorporated.
+    \item \textbf{Multi-retriever search:} If the question is text related, the query is dispatched to the first retrieval pipeline based on the claim text and question and for the image related question, it is dispatched to the second retrieval pipeline based on claim image and question. The retrieved documents for the questions and then passed to the answer generation stage
+\end{enumerate}
+
+The final output of this pipeline is a ranked list of the top 20 most relevant and diverse text evidence passages, along with any image evidence retrieved through LongCLIP's cross-modal search for image related retrieval.
+
+\subsubsection{Answer Generation}
+
+Given a verification question and the retrieved evidence documents, the answer generation module produces a direct answer grounded exclusively in the provided evidence. The module uses the same VLM as the rest of the pipeline, prompted with a system instruction that enforces strict evidence-grounding.
+
+The input in prompt is structured as:
+
+\begin{verbatim}
+Claim: [claim text]
+Question: [verification question]
+Meta Data: The claim was made on [claim date] and was made in [claim location].
+Retrieved documents:
+  The 1st retrieved document: [text]
+  The 2nd retrieved document: [text]
+  ...
+\end{verbatim}
+
+The model generates the answer with a temperature of 0.5 to prioritize factual accuracy with a good reasoning capability. The date and location metadata of the claim is appended to the prompt when available, providing temporal and geographical context that can help resolve ambiguous evidence.
+
+For image-related questions, the corresponding claim image indices are attached to the question text in the format \texttt{[IMG\_1]}, \texttt{[IMG\_2]}, etc., allowing the model to reference specific images in its answer.
+
+The full prompt for answer generation can be found in Appendix ~\ref{ch:appendix_answer}.
+
+\subsection{QA-to-Evidence Conversion}
+
+After an answer is generated, the question-answer pair is converted into a declarative evidence statement using an LLM with in-context learning. This conversion transforms interrogative question-answer pairs into assertive statements that are more suitable for downstream verdict prediction.
+
+The conversion uses few-shot demonstrations that illustrate the expected transformation pattern:
+
+\begin{itemize}
+    \item \textbf{Factual QA:} ``What is the date of the claim?'' + ``Nov. 22, 2023'' $\rightarrow$ ``The date of the claim is Nov. 22, 2023.''
+    \item \textbf{Image-referenced QA:} ``Who is shown in the image?'' + ``[IMG\_1]'' $\rightarrow$ ``The person shown is [IMG\_1].''
+    \item \textbf{Unanswerable QA:} ``Did X happen?'' + ``No answer could be found'' $\rightarrow$ ``No answer was found regarding whether X happened.''
+\end{itemize}
+
+Image placeholders are preserved in the evidence statements so that the verdict and justification modules can reference specific claim images. The resulting evidence statements, together with any retrieved image evidence, form the complete evidence package for each verification question.
+
+\subsection{Evidence Accumulation Across Iterations}
+
+As the iterative QA loop progresses across multiple iterations, each question-answer is accumulated into a growing context. This context serves two purposes:
+
+\begin{itemize}
+    \item \textbf{Question generation guidance:} The accumulated QA pairs are fed back to the question generator to prevent repetition and to guide subsequent questions toward unexplored aspects of the claim.
+    \item \textbf{Verdict input:} After all iterations are complete, the full set of evidence statements along with the claim text, claim images, and metadata — is passed to the verdict prediction and justification generation modules for final claim assessment.
+\end{itemize}
+
+
+\section{Claim based Retrieval for QA pair generation}
+\label{section:qa_gen_answering}
+
+
+This approach introduces a \textit{Analysis Model} that performs evidence retrieval and QA generation in a single coordinated pass. This section describes the end-to-end pipeline as implemented in the final system, detailing how a multimodal claim is processed from input to a set of diagnostic question-answer pairs.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{images/RetrievalQA.pdf}
+\caption{Claim based retrieval for QA pair generation. The green sections are for the retrieval methods, blue sections are for VLM based reasoning and generation and yellow sections are the inputs to the VLM}
+\label{fig:evidenceRetrievalFirst}
+\end{figure}
+
+
+\subsection{Pipeline Overview}
+
+Given a multimodal claim consisting of textual content $c$, a set of associated images $\mathcal{I} = \{I_1, I_2, \ldots, I_m\}$, and metadata (date and location), the Analysis Model executes the following stages sequentially:
+
+\begin{enumerate}
+    \item \textbf{Image Captioning:} Generate textual descriptions of each claim image.
+    \item \textbf{Query Augmentation:} Produce paraphrases of the claim text to expand retrieval coverage.
+    \item \textbf{ICL Example Selection:} Retrieve semantically similar training examples for in-context learning.
+    \item \textbf{Dual-Pass Evidence Retrieval:} Retrieve evidence through two complementary retrieval passes — text-only and image-augmented.
+    \item \textbf{Prompt Construction:} Assemble the final prompt with claim, evidence, captions, metadata, and ICL examples.
+    \item \textbf{QA Pair Generation:} Query the Vision-Language Model to produce structured diagnostic question-answer pairs.
+\end{enumerate}
+
+The complete pipeline is illustrated in Figure~\ref{fig:evidenceRetrievalFirst}.
+
+\subsection{Image Captioning Stage}
+
+The image captions are generated as described in section ~\ref{subsection:caption}. These captions serve a dual purpose: (1) they enable LongCLIP for text-text retrieval , and (2) they are included in the final QA generation prompt to provide the model with textual access to image information.
+
+\subsection{Query Augmentation via Paraphrasing}
+
+To improve retrieval recall, the system generates multiple paraphrases of the original claim text using the VLM:
+
+\begin{equation}
+    \mathcal{P} = f_{\text{VLM}}(c, p_{\text{paraphrase}}, n)
+\end{equation}
+
+where $n = 3$ is the default number of paraphrases generated. Paraphrasing serves to diversify the lexical and semantic representation of the claim, ensuring that retrieval captures evidence that may use different terminology to describe the same event or assertion. The paraphrases are concatenated with the original claim text to form an augmented query:
+
+\begin{equation}
+    q_{\text{aug}} = c \oplus \mathcal{P}
+\end{equation}
+
+where $\oplus$ denotes string concatenation. This augmented query is used in subsequent retrieval passes to maximize coverage across different phrasings of the same factual assertions.
+
+\subsection{In-Context Learning Example Selection}
+Similar claim text and their corresponding questions are retrieved from the training examples to provide a guidance for Question generation as described in section \ref{subsection:icl}.
+
+
+\subsection{Dual-Pass Evidence Retrieval}
+
+A key design decision in the pipeline is the use of two separate retrieval passes that target complementary evidence signals. Rather than performing a single retrieval with all available information, the system executes:
+
+\subsubsection{Pass 1: Text-Only Retrieval}
+
+The first pass retrieves evidence using only the textual content of the claim and its paraphrases using the first retrieval pipeline defined by green section in Figure ~\ref{fig:rag}:
+
+\begin{equation}
+    \mathcal{E}_{\text{text}} = \text{Retrieve}(q_{\text{aug}}, \emptyset, \emptyset)
+\end{equation}
+
+where the empty sets indicate that no images or captions are provided to the retriever. This pass focuses on identifying textual evidence that is semantically or lexically related to the claim's factual assertions, independent of any visual content. The retrieval passes through the the hybrid pipeline (BGE + SPLADE $\rightarrow$ RRF $\rightarrow$ deduplication $\rightarrow$ cross-encoder reranking $\rightarrow$ MMR diversification), returning the top-$k$ most relevant text documents.
+
+\subsubsection{Pass 2: Image-Augmented Retrieval}
+
+The second pass incorporates the claim images and their captions using the second retrieval pipeline defined by blue section in Figure ~\ref{fig:rag}:
+
+\begin{equation}
+    \mathcal{E}_{\text{image}} = \text{Retrieve}(\emptyset, \mathcal{I}, \{\text{cap}_1, \ldots, \text{cap}_m\})
+\end{equation}
+
+This pass activates LongCLIP's cross-modal retrieval capabilities, enabling the system to find evidence that is visually similar to the claim images or textually related to the image content and captions.
+
+\subsubsection{Rationale for Dual-Pass Design}
+
+The dual-pass strategy addresses a fundamental challenge in multimodal retrieval: image-augmented queries can sometimes overwhelm or dilute the textual signal, particularly when images are loosely related to the core factual assertion. By maintaining a separate text-only pass, the system ensures that purely textual evidence (e.g., fact-checking articles, news reports, official statements) is not lost in favor of visually similar but factually irrelevant content. Also sometimes the textual evidence from claim text dominate the textual evidence using the claim images and using a single text based cross encoder for the combined documents filtered using the claim text may dilute the textual documents retrieved using LongClip .The results from both passes are combined in the final evidence pool, providing the QA generation model with a diverse set of evidence spanning both text-grounded and image-grounded sources.
+
+\subsection{Evidence Formatting}
+
+The evidence documents from both retrieval passes are merged and formatted into a numbered list for inclusion in the prompt:
+
+\begin{verbatim}
+Document 1: [text from text-only retrieval]
+Document 2: [text from text-only retrieval]
+...
+Document N: [text from image-augmented retrieval]
+Document N+1: [text from image-augmented retrieval]
+...
+\end{verbatim}
+
+Documents from the text-only pass appear first, followed by documents from the image-augmented pass. This ordering ensures that purely textual evidence is presented prominently, while image-related evidence provides supplementary context. The total number of documents presented to the model is bounded by the combined retrieval top-$k$ from both passes.
+
+\subsection{Prompt Assembly and QA Generation}
+
+The final prompt is assembled by combining all processed inputs into a structured template that guides the VLM toward producing diagnostic question-answer pairs. The prompt consists of:
+
+
+The model generates a response with a temperature of 0.5, balancing factual grounding with sufficient diversity in the generated questions. The output is parsed as a JSON array, with validation ensuring that each element contains the required fields.
+
+This single-pass architecture differs from the iterative approach described in earlier sections by generating all questions simultaneously with access to pre-retrieved evidence, rather than iteratively conditioning on previous answers. The trade-off is reduced computational cost (fewer VLM calls and retrieval operations) at the potential expense of adaptive question refinement. However, by providing the model with comprehensive evidence upfront, this approach enables the generation of more informed and evidence-grounded questions from the outset.
+
+\section{Verdict Prediction and Justification Generation}
+
+After all Question-Answer Pair generation is completed for each of the approaches, the accumulated evidence is passed to two final modules: verdict prediction and justification generation. These modules operate sequentially — the predicted verdict is first determined from the evidence, and then a natural language justification is generated to explain the reasoning behind the verdict.
+
+\subsection{Verdict Prediction}
+
+The verdict prediction module determines the veracity of the claim by classifying it into one of four predefined categories based on the collected evidence. The module takes as input the claim text, claim images, metadata (date and location), and the full set of evidence statements accumulated across all QA iterations.
+
+\subsubsection{Verdict Categories}
+
+The system classifies each claim into exactly one of the following four verdict labels:
+
+\begin{itemize}
+    \item \textbf{Supported:} The evidence clearly supports the claim. This verdict is assigned when the retrieved evidence contains consistent and credible information that supports the factual assertions made in the claim.
+    \item \textbf{Refuted:} The evidence contradicts the claim, or no credible support exists for it. This category is the preferred default when the system is uncertain — the prompt explicitly instructs the model to prefer ``Refuted'' over ``Not Enough Evidence'' in ambiguous cases. This design decision reflects the observation that claims submitted for fact-checking are more likely to be false than true.
+    \item \textbf{Not Enough Evidence:} The retrieved evidence is completely irrelevant to the claim or insufficient to make any determination. This verdict is reserved for cases where the evidence simply does not address the factual assertions in the claim.
+    \item \textbf{Conflicting:} The evidence is mixed or misleading that is some sources support the claim while others contradict it, or the evidence itself contains internally inconsistent information.
+\end{itemize}
+
+\subsubsection{Verification Prompt Structure}
+
+The verdict is generated by prompting the VLM with a structured input that consists of the following components:
+
+\begin{enumerate}
+    \item \textbf{System role:} The model is assigned the role of a fact-checking system.
+    \item \textbf{Task specification:} The prompt instructs the model to select exactly one verdict label from the four predefined categories.
+    \item \textbf{Claim text:} The original textual content of the claim.
+    \item \textbf{Metadata:} Temporal and geographical context in the format ``The claim was made on [date] and was made in [location].''
+    \item \textbf{Evidence:} The concatenated evidence statements from all QA iterations, each separated by a period and a newline.
+    \item \textbf{Claim images:} The original claim images are appended as visual inputs, allowing the model to cross-reference visual content against the textual evidence.
+\end{enumerate}
+
+The prompt enforces strict output constraints: the model must output exactly one label with no explanations, punctuation, or additional text and can be found in Appendix ~\ref{ch:appendix_verdict}. This constrained output format ensures that the verdict can be reliably parsed and used in downstream evaluation without post-processing.
+
+The verification is performed with a low temperature of 0.2 to maximize determinism and consistency in the predicted verdicts.
+
+\subsection{Justification Generation}
+
+Once a verdict has been determined, the justification generation module produces a natural language explanation of how the evidence supports the predicted verdict. Unlike the verdict prediction step, which outputs a single label, the justification module generates a detailed textual explanation that traces the reasoning from evidence to conclusion.
+
+\subsubsection{Justification Prompt Structure}
+
+The justification is generated using a multi-turn prompt that can be found in Appendix ~\ref{ch:appendix_justification} that progressively builds the input context:
+
+\begin{enumerate}
+    \item \textbf{System role:} The model is assigned the role of a justification generation system for fact-checking, with detailed instructions on how to analyze claims, evidence, and metadata.
+    \item \textbf{Claim context:} The metadata and claim text are provided as the initial user message, along with the original claim images.
+    \item \textbf{Evidence:} The full set of evidence statements is appended to the prompt.
+    \item \textbf{Verdict and instruction:} The predicted verdict is provided last, with the instruction: ``The predicted verdict is [verdict]. Please generate your justification (i.e., explanation) for the verdict.''
+\end{enumerate}
+
+This ordering with claim first, then evidence, then verdict is designed to encourage the model to reason about how the evidence connects to the claim before explaining the pre-determined verdict, rather than generating a post-hoc rationalization.
+
+The justification is generated with a temperature of 0.2, consistent with the verdict prediction step, to produce focused and factually grounded explanations.
+
+\section{Pipeline Summary}
+
+The complete fact-checking pipeline operates as follows: given a multimodal claim, the system first generates image captions to create textual proxies for visual content. Using the first approach ~\ref{section:iterative} it then enters an iterative question generation and answering loop, where each iteration produces verification questions, retrieves evidence through the hybrid retrieval pipeline, generates answers grounded in the retrieved evidence, and converts question-answer pairs into declarative evidence statements. Using the second approach ~\ref{section:qa_gen_answering} , the pipeline retrieves the multimodal evidences, analyses the evidences and generates Question-Answer pairs based on the claim and the evidences. After the Question-Answer generation phase is complete, the accumulated QA pairs are passed to the verdict prediction module, which classifies the claim into one of four categories (Supported, Refuted, Not Enough Evidence, or Conflicting). Finally, the justification generation module produces a natural language explanation of the verdict based on the evidence.
+

@@ -1,0 +1,78 @@
+\chapter{Instructions to Compile and Run System}
+\label{apx:instructions}
+
+\instructions{
+This appendix may contain following:
+%
+\begin{itemize}
+    \item Installation instructions
+    \item Source code / class structure
+    \item More detailed evaluation results
+\end{itemize}
+}
+
+\section{Environment Setup}
+
+The system requires a VLLM server to serve the MLLM. It uses a Conda environment with specific packages. The environment configuration is provided as a YAML file (\texttt{environment\_vllm.yml}).
+The VLLm server was run on an A100 40GB GPU with driver version - and cuda version - 13.0
+
+\subsection{Prerequisites}
+
+\begin{itemize}
+    \item Conda (Miniconda or Anaconda) installed on the system.
+    \item NVIDIA GPU with CUDA support (A100 40GB or 80GB recommended).
+    \item Linux operating system (tested on Ubuntu).
+\end{itemize}
+
+\subsection{Installation Steps}
+
+\begin{enumerate}
+    \item \textbf{Clone the repository:}
+\begin{verbatim}
+git clone <repository-url>
+cd Project
+\end{verbatim}
+
+    \item \textbf{Create the Conda environment from the YAML file:}
+\begin{verbatim}
+conda env create -f environment_vllm.yml
+\end{verbatim}
+
+    \item \textbf{Activate the environment:}
+\begin{verbatim}
+conda activate vllm
+\end{verbatim}
+
+    \item \textbf{Verify the installation:}
+\begin{verbatim}
+python -c "import vllm; print(vllm.__version__)"
+python -c "import torch; print(torch.cuda.is_available())"
+\end{verbatim}
+\end{enumerate}
+
+\subsection{Alternative Installation (from spec file)}
+
+If the YAML installation fails due to platform differences, use the spec file:
+
+\begin{verbatim}
+conda create --name vllm --file conda_vllm_packages.txt
+conda activate vllm
+\end{verbatim}
+
+\subsection{Running the Pipeline}
+
+After activating the environment, the vllm server can be run using:
+
+\begin{verbatim}
+vllm serve Qwen/Qwen3-VL-8B-Instruct \
+  --tensor-parallel-size 1 \
+  --max-model-len 32768 \
+  --gpu-memory-utilization 0.90 \
+  --limit-mm-per-prompt '{"video":0, "image":10}' \
+  --max-num-seqs 128 \
+  --port 8005
+\end{verbatim}
+
+\begin{verbatim}
+bash run_with_vllm_splade_clip_icl_qwen.sh
+\end{verbatim}

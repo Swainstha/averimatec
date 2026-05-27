@@ -1,0 +1,39 @@
+{
+  "name": "Swain Thesis- LaTeX",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y texlive-latex-base texlive-fonts-recommended texlive-publishers texlive-latex-extra latexmk",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "James-Yu.latex-workshop"
+      ],
+      "settings": {
+        "latex-workshop.latex.tools": [
+          {
+            "name": "latexmk",
+            "command": "latexmk",
+            "args": [
+              "-pdf",
+              "-synctex=1",
+              "-interaction=nonstopmode",
+              "-file-line-error",
+              "%DOC%"
+            ]
+          }
+        ],
+        "latex-workshop.latex.recipes": [
+          {
+            "name": "latexmk",
+            "tools": [
+              "latexmk"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "remoteUser": "root"
+}

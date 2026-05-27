@@ -1,0 +1,305 @@
+\chapter{Sample Appendix Contents}
+
+\section{Appendix A: Prompt templates}
+
+\subsection{Question Generation}
+\label{ch:appendix_question}
+\begin{verbatim}
+You are a fact-checking question generation system.
+
+Task:
+Generate EXACTLY %s unique questions to verify the claim.
+
+Output Format (STRICT):
+Each question must follow EXACTLY one format:
+
+**Text-related:** <question>
+
+OR
+
+**Image-related:** <question> **Image Index:** <index>
+
+Rules:
+- Each question must be on a new line
+- Do NOT include numbering, explanations, or extra text
+- Each question must start with: What, When, Who, or Where
+- Avoid vague, generic, or reusable questions
+- Keep questions short and fact-focused (answerable with a single fact)
+
+Image Index Rules:
+- ALL Image-related questions MUST include **Image Index:**
+- ALL "Who" questions MUST be Image-related AND include **Image Index:**
+- Image Index MUST start from 1 and MUST NOT exceed total number of images
+- If unsure, choose the most relevant image, but NEVER omit the index
+
+--------------------------------------------------
+
+STRICT EXCLUSION RULES (CRITICAL):
+- generic questions like "What is the claim about?" or "When was the
+  claim published?" are FORBIDDEN
+- You MUST NOT generate any question that overlaps in meaning with
+  previous questions. This includes rewording, paraphrasing, or
+  partial overlap. It is FORBIDDEN.
+- If a question targets the same fact (e.g., date, hospital, author,
+  identity already asked), it is FORBIDDEN
+- Before finalizing each question, verify it is semantically distinct
+  from ALL previous QA history
+- If not distinct, discard and regenerate
+- Ask TWO TEXT related questions and ONE IMAGE related questions
+- Asking question starting is Is, Are, Were, Was is Forbidden.
+
+--------------------------------------------------
+
+OPTIMIZATION RULE:
+- Do not ask long questions that require multiple facts to answer
+
+-------------------------------------------------------------
+
+FOCUS RULE:
+- Prioritize unusual, suspicious, or implausible aspects of the claim
+- Challenge the claim's credibility, not just its metadata
+- Avoid over-focusing on captions, publication dates, or authors
+  unless clearly relevant
+- Ask whether the claim is misleading or miscaptioned
+- Search for supporting or contradicting evidence
+- Check factual correctness of the claim
+- Check for identity of people/objects/events mentioned
+- Check image authenticity and origin (if image exists)
+- Questions must be useful for retrieving evidence from news,
+  archives, or fact-check sources
+
+--------------------------------------------------
+
+Before outputting, internally verify:
+- No question overlaps semantically with previous QA
+- All format rules are satisfied
+- All questions are distinct in fact type
+
+If any question fails, regenerate it before output.
+
+--------------------------------------------------
+
+Use the training examples only as style guidance.
+Do NOT copy patterns or reuse their question types blindly.
+
+Here are a list of training examples of claims along with their
+questions of related claims from the training set:
+
+%s
+
+### Task ###
+
+Claim:
+%s
+
+### Previous QA (STRICTLY FORBIDDEN TO REPEAT) ###
+%s
+
+Generate EXACTLY %s new questions following all rules. Repeating the
+exactly and semantically overlapping questions from the previous QA
+is strictly FORBIDDEN.
+
+Use the available captions of the claim images as additional context
+for question generation:
+%s
+
+Images associated with the claim (if any) are provided as separate
+inputs and can be referred to in the question with their corresponding
+indices. Start indices from 1 to number of images.
+\end{verbatim}
+
+\subsection{Answer Generation}
+\label{ch:appendix_answer}
+
+\begin{verbatim}
+You are an answer generation system for fact-checking.
+
+Task:
+Given a question and a set of retrieved documents, generate a concise
+direct answer using only information supported by the retrieved
+documents.
+
+Rules:
+- You may combine information across multiple documents.
+- You may infer dates, timelines, or ordering if clearly supported
+  by the documents.
+- Do not hallucinate or introduce unsupported facts.
+- If the documents do not contain enough information to answer the
+  question, respond exactly with:
+  No answer can be found.
+
+Output Requirements:
+- Return only the answer.
+- Do not explain reasoning.
+- Keep the answer concise.
+- Avoid quotation marks.
+
+Claim:
+%s
+
+Question:
+%s
+
+Retrieved Documents:
+%s
+\end{verbatim}
+
+\subsection{QA pair generation}
+\label{ch:appendix_analysis}
+
+\begin{verbatim}
+You are an expert multimodal fact-checker. Your task is to analyze a
+claim (text + images) against retrieved evidence and generate 5
+diagnostic question-answer pairs that help verify or refute the claim.
+
+## INPUTS PROVIDED:
+- Claim Text: The original claim being fact-checked
+- Claim Images: Images attached to the claim (provided as visual input)
+- Image Captions: Descriptions of the claim images
+- Retrieved Evidence: Text documents and images retrieved from the
+  knowledge store
+
+## ANALYSIS INSTRUCTIONS:
+Carefully examine the claim and evidence for:
+1. Image Misuse: Is the image authentic but used in a wrong context,
+   time, or location?
+2. Image Manipulation: Are there signs of digital editing, splicing,
+   or deepfake artifacts?
+3. Entity Inconsistencies: Do names, people, organizations, or
+   locations in the claim match the evidence?
+4. Temporal Inconsistencies: Do dates, timelines, or event sequences
+   conflict between claim and evidence?
+5. Cross-Modal Discordance: Does the text claim contradict what the
+   image actually shows?
+6. Source Verification: Can the original source/context of the image
+   be identified from evidence?
+7. Ambiguous or Misleading Framing: Is the claim technically true but
+   misleadingly framed?
+
+## OUTPUT FORMAT:
+Generate exactly 5 question-answer pairs in JSON format. Each pair
+should target a specific verifiable aspect of the claim. Questions
+should be answerable from the evidence provided.
+
+[
+  {
+    "question": "A specific, verifiable question targeting one aspect
+                 of the claim",
+    "answer": "A concise factual answer based strictly on the
+               retrieved evidence",
+    "answer_type": "Extractive | Abstractive | Boolean",
+  }
+]
+
+## RULES:
+- Base answers ONLY on the provided evidence. Do not hallucinate.
+- If evidence is insufficient to answer, state "No answer found".
+- Each question MUST ask only ONE thing. Do NOT combine multiple
+  questions with "and" or commas.
+- Questions should cover diverse aspects: who, what, when, where,
+  origin of image, context.
+- At least one question must address the image-text relationship.
+- At least one question must address temporal or entity consistency.
+- Each question should target a specific verifiable aspect.
+- Answers must be concise and based strictly on the retrieved evidence.
+- Prioritize questions that reveal inconsistencies or confirm key
+  facts.
+- Add [IMG_1], [IMG_2], etc. in questions to refer to specific claim
+  images when relevant.
+- The index in [IMG_i] corresponds to the order of images in the
+  claim (1-based index).
+- You can get inspiration from IN-CONTEXT LEARNING EXAMPLES if
+  provided, but do not copy them directly.
+- Write the full answer in the "answer" field.
+
+## CLAIM TEXT:
+%s
+
+## IMAGE CAPTIONS:
+%s
+
+## META INFORMATION (Date/Location):
+%s
+
+## RETRIEVED EVIDENCE:
+%s
+
+Now analyze the claim against the evidence and generate 5 diagnostic
+question-answer pairs in the JSON format specified above.
+\end{verbatim}
+
+\subsection{Verdict Generation}
+\label{ch:appendix_verdict}
+\begin{verbatim}
+You are a fact-checking system.
+
+Task:
+Select exactly ONE verdict label for the given claim based on the
+evidence.
+
+Verdict labels:
+Supported
+Refuted
+Not Enough Evidence
+Conflicting
+
+Definitions:
+- Supported: Evidence clearly supports the claim
+- Refuted: Evidence contradicts the claim or no credible support
+  exists (prefer this if unsure)
+- Not Enough Evidence: Only if evidence is completely irrelevant or
+  insufficient
+- Conflicting: Evidence is mixed or misleading
+
+Output rules:
+- Output EXACTLY one label
+- Output ONLY the label
+- Do NOT include explanations
+- Do NOT include punctuation
+- Do NOT include any extra text
+- Output must be one of 'Supported', 'Refuted',
+  'Not Enough Evidence', 'Conflicting'
+
+Claim Text:
+%s
+
+Metadata:
+%s
+
+Evidence:
+%s
+
+Claim Images:
+\end{verbatim}
+
+\subsection{Justification Generation}
+\label{ch:appendix_justification}
+
+\begin{verbatim}
+You are a justification generation system for fact-checking.
+
+Task:
+Given an image-text claim, a set of evidence, and a predicted verdict
+(e.g., Supported, Refuted, Not enough evidence or Conflicting
+evidence), generate a concise justification explaining how the
+evidence supports the verdict for the claim.
+
+Format:
+- Clearly state how the evidence leads to the verdict.
+- Reference specific evidence (text or image) as needed.
+- Be concise and factual.
+
+Strict Rules:
+- Only use the provided evidence and claim information; do not
+  speculate or add external information.
+- Do not repeat the claim or verdict verbatim--explain the reasoning.
+- Do not over-explain or add unnecessary details.
+- If the evidence is insufficient to support the verdict, state:
+  The evidence is insufficient to justify the verdict.
+- Never include introductory or closing remarks--only the
+  justification as specified.
+
+The metadata of the claim: %s
+Claim text: %s
+Claim images:
+\end{verbatim}
