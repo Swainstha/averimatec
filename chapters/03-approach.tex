@@ -283,20 +283,38 @@ Building indices for the entire knowledge store across all three systems is comp
 On subsequent runs, the system checks for cached indices and loads them directly, bypassing the encoding step entirely.
 
 For large-scale index construction across hundreds or thousands of claims, all three systems support multi-GPU parallel processing. Multiple worker processes are spawned across available GPUs, each pulling claim IDs from a shared queue, building the index, and caching the result. This allows the full index construction to be distributed across all available hardware, significantly reducing the wall-clock time required for preprocessing.
-
-\section{Hybrid Multimodal Retrieval Augmented Generation}
+ 
+\section{Hybrid Multimodal Dual-Branch Retriever (Dual-RAG)}
 \label{ch:rag}
 
 \begin{figure}[ht]
 \centering
 \includegraphics[width=\textwidth]{images/NewNewRag.pdf}
-\caption{Hybrid Multimodal Retrieval Augmented Generation. The yellow sections are the inputs and red sections are the outputs of RAG. The purple sections are the different indexes for the specific retrieval methods}
+\caption{Hybrid Multimodal Dual-Branch Retriever (Dual-RAG). The yellow sections are the inputs and red sections are the outputs of RAG. The purple sections are the different indexes for the specific retrieval methods}
 \label{fig:rag}
 \end{figure}
 
-We have a dual RAG system where different retrieval methods are used to retrieve different information from different sources. For retrieving information for the claim text Splade and BGE are used and the information is retrieved from the text related text documents based on the claim text, its paraphrases and the fact checking question if available. Different queries are built for splade and BGE retrieval systems.
+In this thesis, we refer to our Hybrid Multimodal Dual-Branch Retriever as Dual-RAG. Dual-RAG separates evidence retrieval into text-based and image-based branches. The objective of this separation is to preserve strong lexical and semantic signals from claim text while also capturing cross-modal visual evidence from claim images.
 
-Similarly for image related retrievals, we have the claim images, their corresponding captions  and fact checking question if available . The claim Image, caption and the question is used to retreive the related text and image documents from the image related documents  given in the dataset and also from the other source which was retrieved using Reverse image search using Google API using the LongCLIP retreival.
+\subsubsection{Text-Based Retrieval Branch}
+
+The text-based branch retrieves evidence from textual knowledge store documents using two complementary retrievers:
+\begin{itemize}
+    \item \textbf{BGE} for dense semantic similarity,
+    \item \textbf{SPLADE} for sparse lexical matching.
+\end{itemize}
+
+Retriever-specific queries are constructed from the claim text, its paraphrases when available, and the fact-checking question. This branch is designed to capture both semantic paraphrases and exact lexical details (entities, dates, numbers, and quoted claims).
+
+\subsubsection{Image-Based Retrieval Branch}
+
+The image-based branch retrieves evidence using LongCLIP with multimodal inputs derived from claim images and their captions, together with the verification question. This branch searches both image-related textual and visual spaces to retrieve:
+\begin{itemize}
+    \item text passages aligned with the visual content,
+    \item related images from the knowledge store and reverse-image-search-expanded sources.
+\end{itemize}
+
+By isolating this branch from the text-only branch, the system avoids over-dominance of textual signals and improves retrieval of visually grounded evidence.
 
 \subsection{Reciprocal Rank Fusion (RRF)}
 
@@ -307,7 +325,7 @@ Different retrieval methods capture complementary relevance signals:
     \item LongCLIP captures visual-semantic alignment.
 \end{itemize}
 
-The outputs from BGE, SPLADE, and LongCLIP retrieval are combined using Reciprocal Rank Fusion (RRF).
+Within each retrieval branch, the ranked outputs are combined using Reciprocal Rank Fusion (RRF).
 
 Different retrieval methods produce scores on incompatible scales, causing some modalities to dominate during fusion. Reciprocal Rank Fusion (RRF) avoids this issue by combining results based on rank positions rather than raw scores, providing more balanced and robust multimodal retrieval across heterogeneous data sources ~\cite{RyanBogan2025Nov}.
 
@@ -320,7 +338,7 @@ where $k$ is a constant (commonly set to 60) that controls the influence of lowe
 
 This allows documents from different sources or search queries to be compared on a consistent scale.
 
-RRF accumulates the scores for documents that appear in more than one list. This ensures that documents found to be relevant across multiple "angles" of a query receive the highest priority in the final ranking ~\cite{Rackauckas2024Jan}.
+RRF accumulates the scores for documents that appear in more than one list. This ensures that documents found to be relevant across multiple "angles" of a query receive the highest priority in the final ranking ~\cite{Rackauckas2024Jan}. In the text-based branch, RRF fuses BGE and SPLADE ranked outputs. In the image-based branch, RRF fuses the ranked text evidence streams returned by LongCLIP retrieval sources.
 
 By fusing documents retrieved from various perspectives, RRF enables the system to provide answers that are more comprehensive and contextualized than traditional retrieval methods ~\cite{Rackauckas2024Jan}.
 
@@ -359,11 +377,11 @@ The reranker significantly improves precision by filtering semantically related 
 
 While cross-encoders are slower than the initial retrievers, the sources emphasize that they remain far more efficient than Large Language Models (LLMs) like GPT-4. In many scenarios, a traditional cross-encoder remains highly competitive with LLMs in terms of ranking quality while requiring significantly less time and computational cost ~\cite{Dejean2024Mar}.
 
-In our implementation, cross-encoders are only used to rerank the text documents retrieved by BGE and splade and not used for documents retrieved by LongCLIP. Since the BGE-reranker is a text only reranker, we have avoided its use for image related documents as they depend on the claim images rather than the claim text.
+In our implementation, cross-encoders are used only for text evidence reranking after RRF for the text branch. They are not applied to image branch because the BGE-reranker is a text-only reranker. This keeps visual evidence handling in the image branch while still improving precision for the final text evidence list.
 
 \subsection{Maximum Marginal Relevance (MMR)}
 
-After reranking, the top 20 documents are further processed using Maximum Marginal Relevance (MMR) to ensure diversity in the retrieved evidence. 
+After reranking, the top ranked documents are further processed using Maximum Marginal Relevance (MMR) to ensure diversity in the retrieved evidence.
 
 News datasets frequently contain:
 \begin{itemize}
@@ -396,7 +414,7 @@ The Lambda ($\lambda$) Parameter: This is a user-tunable value between 0 and 1 t
 
 We have used $\lambda=0.5$ in our experiments to ensure a good balance between relevance and diversity, allowing the system to provide a comprehensive set of evidence while minimizing redundancy. This setting allows users to explore a wider range of perspectives and information related to the claim being fact-checked while being grounded with the query provided.
 
-This whole pipeline of evidence retrieval will be denoted as 'Evidence Retrieval using RAG' in the flow diagrams in next sections.
+This whole pipeline of evidence retrieval will be denoted as 'Dual-RAG Evidence Retrieval' in the flow diagrams in next sections.
 
 \section {Iterative Question-Answer Generation}
 \label{section:iterative}
@@ -505,7 +523,7 @@ The caption is designed to be information-dense rather than verbose, prioritizin
 
 \subsubsection{Per-Question Evidence Retrieval}
 
-For each verification question, the retrieval system constructs queries tailored to the question type and dispatches them to the hybrid retrieval pipeline. The retrieval process proceeds as follows:
+For each verification question, the retrieval system constructs queries tailored to the question type and dispatches them to the Dual-RAG retrieval pipeline. The retrieval process proceeds as follows:
 
 \begin{enumerate}
     \item \textbf{Query construction:} The claim text and the current verification question are combined into retriever-specific query formats (as described in ~\ref{ch:queryConstruction}). For image-related questions, the caption of the referenced claim image is also incorporated.
@@ -625,7 +643,7 @@ The first pass retrieves evidence using only the textual content of the claim an
     \mathcal{E}_{\text{text}} = \text{Retrieve}(q_{\text{aug}}, \emptyset, \emptyset)
 \end{equation}
 
-where the empty sets indicate that no images or captions are provided to the retriever. This pass focuses on identifying textual evidence that is semantically or lexically related to the claim's factual assertions, independent of any visual content. The retrieval passes through the the hybrid pipeline (BGE + SPLADE $\rightarrow$ RRF $\rightarrow$ deduplication $\rightarrow$ cross-encoder reranking $\rightarrow$ MMR diversification), returning the top-$k$ most relevant text documents.
+where the empty sets indicate that no images or captions are provided to the retriever. This pass focuses on identifying textual evidence that is semantically or lexically related to the claim's factual assertions, independent of any visual content. The retrieval passes through the Dual-RAG pipeline (BGE + SPLADE $\rightarrow$ RRF $\rightarrow$ cross-encoder reranking $\rightarrow$ MMR diversification), returning the top-$k$ most relevant text documents.
 
 \subsubsection{Pass 2: Image-Augmented Retrieval}
 
@@ -722,5 +740,5 @@ The justification is generated with a temperature of 0.2, consistent with the ve
 
 \section{Pipeline Summary}
 
-The complete fact-checking pipeline operates as follows: given a multimodal claim, the system first generates image captions to create textual proxies for visual content. Using the first approach ~\ref{section:iterative} it then enters an iterative question generation and answering loop, where each iteration produces verification questions, retrieves evidence through the hybrid retrieval pipeline, generates answers grounded in the retrieved evidence, and converts question-answer pairs into declarative evidence statements. Using the second approach ~\ref{section:qa_gen_answering} , the pipeline retrieves the multimodal evidences, analyses the evidences and generates Question-Answer pairs based on the claim and the evidences. After the Question-Answer generation phase is complete, the accumulated QA pairs are passed to the verdict prediction module, which classifies the claim into one of four categories (Supported, Refuted, Not Enough Evidence, or Conflicting). Finally, the justification generation module produces a natural language explanation of the verdict based on the evidence.
+The complete fact-checking pipeline operates as follows: given a multimodal claim, the system first generates image captions to create textual proxies for visual content. Using the first approach ~\ref{section:iterative} it then enters an iterative question generation and answering loop, where each iteration produces verification questions, retrieves evidence through the Dual-RAG retrieval pipeline, generates answers grounded in the retrieved evidence, and converts question-answer pairs into declarative evidence statements. Using the second approach ~\ref{section:qa_gen_answering} , the pipeline retrieves the multimodal evidences, analyses the evidences and generates Question-Answer pairs based on the claim and the evidences. After the Question-Answer generation phase is complete, the accumulated QA pairs are passed to the verdict prediction module, which classifies the claim into one of four categories (Supported, Refuted, Not Enough Evidence, or Conflicting). Finally, the justification generation module produces a natural language explanation of the verdict based on the evidence.
 
