@@ -241,6 +241,20 @@ where $s_j^{(i)}$ is the activation of term $j$ in chunk $i$. At query time, the
 
 Because both query and chunk representations are sparse, only the terms present in both the query and the chunk contribute to the score, making retrieval efficient even over large vocabularies.
 
+\subsubsection{Index Caching and Parallelization}
+
+Building indices for the entire knowledge store across all three systems is computationally intensive. To avoid redundant computation, each claim's index and associated metadata are serialized to disk:
+
+\begin{itemize}
+    \item \textbf{BGE:} A FAISS binary index file and a pickle file containing document metadata and embeddings.
+    \item \textbf{SPLADE:} A single pickle file containing the inverted index, chunk representations, and document metadata.
+    \item \textbf{LongCLIP:} A claim-specific directory containing separate FAISS indices for images and text, along with their respective metadata and embeddings stored as NumPy arrays.
+\end{itemize}
+
+On subsequent runs, the system checks for cached indices and loads them directly, bypassing the encoding step entirely.
+
+For large-scale index construction across hundreds or thousands of claims, all three systems support multi-GPU parallel processing. Multiple worker processes are spawned across available GPUs, each pulling claim IDs from a shared queue, building the index, and caching the result. This allows the full index construction to be distributed across all available hardware, significantly reducing the wall-clock time required for preprocessing.
+
 \subsection{Query Construction}
 \label{ch:queryConstruction}
 
@@ -269,20 +283,6 @@ fact check claim verify truth context debunked:
 \subsubsection{LongCLIP Queries}
 
 LongCLIP queries encode the claim image directly through the vision encoder for image-to-text and image-to-image retrieval. For text-to-text retrieval within the LongCLIP index, the caption is encoded through the text encoder. The shared embedding space allows cross-modal matching, where a claim image can retrieve textually described evidence and vice versa.
-
-\subsubsection{Index Caching and Parallelization}
-
-Building indices for the entire knowledge store across all three systems is computationally intensive. To avoid redundant computation, each claim's index and associated metadata are serialized to disk:
-
-\begin{itemize}
-    \item \textbf{BGE:} A FAISS binary index file and a pickle file containing document metadata and embeddings.
-    \item \textbf{SPLADE:} A single pickle file containing the inverted index, chunk representations, and document metadata.
-    \item \textbf{LongCLIP:} A claim-specific directory containing separate FAISS indices for images and text, along with their respective metadata and embeddings stored as NumPy arrays.
-\end{itemize}
-
-On subsequent runs, the system checks for cached indices and loads them directly, bypassing the encoding step entirely.
-
-For large-scale index construction across hundreds or thousands of claims, all three systems support multi-GPU parallel processing. Multiple worker processes are spawned across available GPUs, each pulling claim IDs from a shared queue, building the index, and caching the result. This allows the full index construction to be distributed across all available hardware, significantly reducing the wall-clock time required for preprocessing.
  
 \section{Hybrid Multimodal Dual-Branch Retriever (Dual-RAG)}
 \label{ch:rag}
@@ -377,7 +377,7 @@ The reranker significantly improves precision by filtering semantically related 
 
 While cross-encoders are slower than the initial retrievers, the sources emphasize that they remain far more efficient than Large Language Models (LLMs) like GPT-4. In many scenarios, a traditional cross-encoder remains highly competitive with LLMs in terms of ranking quality while requiring significantly less time and computational cost ~\cite{Dejean2024Mar}.
 
-In our implementation, cross-encoders are used only for text evidence reranking after RRF for the text branch. They are not applied to image branch because the BGE-reranker is a text-only reranker. This keeps visual evidence handling in the image branch while still improving precision for the final text evidence list.
+In our implementation, cross-encoders are used only for textual evidence reranking after RRF for the text branch. They are not applied to image branch because the BGE-reranker is a text-only reranker. This keeps visual evidence handling in the image branch while still improving precision for the final text evidence list.
 
 \subsection{Maximum Marginal Relevance (MMR)}
 
