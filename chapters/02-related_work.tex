@@ -54,59 +54,7 @@ Recent studies estimate that nearly 80\% of online claims are multimodal, involv
 
 To support research in multimodal fact-checking, ~\citet{Cao2025May} introduced AVERIMATEC (Automatic Verification of Image-Text Claims), a dataset containing 1,297 real-world multimodal claims composed of both images and text. Each claim is annotated with question-answer evidence pairs retrieved from the web, along with metadata, veracity labels, and textual justifications explaining how the final verdict is derived.
 
-\section{Retrieval-Augmented Multimodal Fact-Checking Pipelines}
-
-\subsection{Retrieval-Augmented Generation (RAG) for Fact-Checking}
-
-Large Language Models (LLMs) have demonstrated strong capabilities in natural language understanding and generation, leading to their adoption in automated fact-checking tasks. However, studies by ~\citet{Proma2025Feb} and ~\citet{Lewis2020May} highlight several limitations that reduce their reliability for factual verification.
-
-A major challenge is that LLMs often fail to ground their responses in credible and verifiable sources. When asked to provide supporting evidence, models may generate fabricated articles, headlines, or citations. Additionally, because LLMs are constrained by the temporal limits of their training data, they struggle to verify recent events that occurred after the training cutoff date. These issues are further compounded by the tendency of LLMs to produce incorrect information with high confidence, which can mislead users who place significant trust in model-generated responses.
-
-These limitations emphasize the need for external evidence retrieval mechanisms to support factual reasoning. As a result, Retrieval-Augmented Generation (RAG) approaches have become increasingly important, where relevant information is first retrieved from external knowledge sources and then used by the model to generate grounded and evidence-based responses.
-
-Retrieval-Augmented Generation (RAG) is a framework designed to improve the factual reliability of Large Language Models (LLMs) by enabling them to retrieve and utilize external information during response generation. By accessing knowledge sources such as web documents or databases, RAG systems can incorporate up-to-date and verifiable information, making them more suitable for fact-checking and recent-event analysis.
-
-In essence, ~\citet{Lewis2020May} discusses RAG as a grounding mechanism that reduces reliance on the model’s internal parametric knowledge and encourages evidence-based generation. This allows model outputs to be supported by retrieved external evidence rather than solely by learned statistical patterns. So RAG
-has become a central component in modern fact-checking pipelines, especially in the context of FEVER-style tasks, where the system must retrieve evidence from a large corpus and use it to verify claims.
-
-~\citet{Lewis2020May} applied the Retrieval-Augmented Generation (RAG) framework to automated fact-checking on the FEVER dataset introduced by ~\citet{Thorne2018Jun}. In this approach, the system retrieves relevant evidence from Wikipedia and then reasons over the retrieved information to determine the veracity of a claim.
-
-Despite not relying on complex retrieval pipelines or intermediate retrieval supervision, RAG achieved competitive performance. For the three-way FEVER classification task, its results were within 4.3\% of state-of-the-art systems that used specialized architectures and extensive engineering. For binary classification, RAG achieved accuracy within 2.7\% of models trained using gold evidence sentences against ~\citet{Thorne2018Jun} , even though it retrieved evidence autonomously using only the input claim.
-
-Both the FEVER baselines presented in ~\citet{Schlichtkrull2023May} and ~\citet{Schlichtkrull2024Nov} utilized Google Search APIs and offline knowledge stores to retrieve evidence documents for claim verification. The retrieved evidence was then used by transformer-based models to reason about the claim and generate a verdict.
-
-\subsubsection{Text Retrieval}
-Earlier fact-checking pipelines primarily relied on traditional retrieval methods such as TF–IDF and BM25, which often suffered from low recall and limited retrieval quality. To address this limitation, ~\citet{Karpukhin2020Nov} introduced Dense Passage Retrieval (DPR), which employs dual BERT encoders to map questions and passages into a shared embedding space. DPR significantly improved retrieval recall over BM25 and became a widely adopted retrieval method for RAG-based systems. Consequently, modern fact-checking and FEVER-style systems commonly combine dense vector retrieval approaches with traditional sparse retrieval techniques such as BM25 ~\citet{Schlichtkrull2024Nov}.
-
-
-Early research in automated fact-checking primarily focused on textual claims and textual evidence. However, the increasing prevalence of multimodal misinformation has highlighted the need for systems capable of jointly processing both textual and visual information.
-
-\subsubsection{Multimodal Retrieval}
-
-Studies in multimodal misinformation further demonstrate that combining text with images can significantly increase the perceived credibility and spread of false claims. This has motivated the development of multimodal fact-checking approaches that incorporate visual evidence alongside textual reasoning ~\cite{Hameleers2020Feb}.
-
-In multi-modal environments, the intersection of textual claims and visual evidence represents a primary vector for misinformation, where the deception often lies not in the falsehood of a single modality, but in the manipulated contextual connection between them.
-
-~\citet{Abdali2024Nov} describe these misinformation of the following types.
-\begin{itemize}
-    \item \textbf{Image Reuse and Out-of-Context Media}: A common form of multimodal misinformation involves reusing authentic images from unrelated events to support false or misleading narratives. Although the images themselves are genuine, presenting them out of context can create deceptive interpretations.
-    
-    \item \textbf{Misleading Captions and False Connections}: Multimodal misinformation frequently combines images with misleading captions or headlines that do not accurately represent the visual content. These captions are often designed to attract attention or provoke emotional responses, despite lacking contextual consistency with the accompanying image.
-    
-    \item \textbf{Manipulated Narratives and Cross-Modal Discordance}: In many cases, the textual and visual components may appear credible individually, but together they form a misleading narrative. Additionally, manipulated media such as edited images or deepfakes can be used to reinforce fabricated claims. Detecting such misinformation requires analyzing inconsistencies between textual and visual modalities rather than examining each modality independently.
-\end{itemize}
-
-Early approaches to multimodal fact-checking, such as the work by ~\citet{Xu2024Mar}, utilized CLIP to jointly encode textual and visual information into a shared feature space. The extracted image and text representations were fused using attention mechanisms and bilinear pooling, after which a classifier was trained to predict the veracity of the claim.
-
-Although these methods demonstrated the effectiveness of multimodal representation learning, they relied primarily on internal feature correlations and did not retrieve supporting evidence from external sources. Consequently, they lacked the ability to provide interpretable evidence or explicit justifications for their predictions.
-
-Similarly, ~\citet{Abdullah2026Jan} proposed an ensemble-based multimodal fact-checking framework that combines textual and visual information using ViLBERT’s two-stream architecture. The approach also incorporates VADER sentiment analysis to capture emotional language and Image–Text Contextual Similarity to detect inconsistencies between textual and visual content. Multiple models, including Bi-GRU, Transformer-XL, DistilBERT, and XLNet, are combined through a stacked ensemble with soft voting, followed by a T5-based metaclassifier for final prediction.
-
-While this framework effectively integrates multiple modalities and learning models, it primarily focuses on classification performance and does not emphasize evidence retrieval or interpretable reasoning, both of which are important for practical and trustworthy fact-checking systems.
-
-Embedding models such as ColPali used by ~\citet{Faysse2024Jun} jointly encode visual and textual information into multi-vector representations and leverage the late-interaction mechanism introduced in ColBERT. This design enables fine-grained semantic matching between textual queries and multimodal image regions, leading to state-of-the-art performance on multimodal retrieval benchmarks.
-
-~\citet{Duwal2025May} proposed a graph-based multimodal fact-checking approach that assesses the consistency between images and captions. Their method constructs an evidence graph from retrieved online textual evidence and a claim graph from the caption content. Graph Neural Networks (GNNs) are then used to encode and compare these graph representations, enabling the system to evaluate the veracity of image–caption pairs.
+\section{AVERIMATEC Competition Systems Overview}
 
 Recent multimodal fact-checking systems increasingly combine evidence retrieval with multimodal reasoning and question-answer generation. Using the AVERIMATEC dataset, ~\citet{Cao2025May} proposed a retrieval-based framework consisting of three main components: a question generation module that formulates questions from the claim, a question answering module that retrieves evidence from the web, and a claim verification module that predicts claim veracity using the retrieved evidence.
 
@@ -132,6 +80,25 @@ This multi-agent design enables more detailed evidence analysis and improves int
 Retrieved evidence forms the foundation of modern fact-checking systems, making robust multimodal retrieval a critical challenge in multimodal verification. The quality of retrieved evidence directly influences downstream reasoning, question–answer generation, and final verdict prediction, often impacting system performance more than the reasoning model itself. This highlights the importance of effective retrieval strategies in multimodal fact-checking pipelines.
 
 Recent frameworks such as VILLAIN and AIC CTU primarily rely on the mxbai embedding family and standard reverse image search techniques. In contrast, the proposed approach employs a more diverse retrieval ensemble by combining SPLADE for sparse lexical expansion, BGE-en for dense semantic retrieval, and LongCLIP for long-context visual grounding. This combination aims to mitigate vocabulary mismatch and visual description bottlenecks commonly observed in existing multimodal RAG systems.
+
+\section{Retrieval-Augmented Generation (RAG) for Fact-Checking}
+
+Large Language Models (LLMs) have demonstrated strong capabilities in natural language understanding and generation, leading to their adoption in automated fact-checking tasks. However, studies by ~\citet{Proma2025Feb} and ~\citet{Lewis2020May} highlight several limitations that reduce their reliability for factual verification.
+
+A major challenge is that LLMs often fail to ground their responses in credible and verifiable sources. When asked to provide supporting evidence, models may generate fabricated articles, headlines, or citations. Additionally, because LLMs are constrained by the temporal limits of their training data, they struggle to verify recent events that occurred after the training cutoff date. These issues are further compounded by the tendency of LLMs to produce incorrect information with high confidence, which can mislead users who place significant trust in model-generated responses.
+
+These limitations emphasize the need for external evidence retrieval mechanisms to support factual reasoning. As a result, Retrieval-Augmented Generation (RAG) approaches have become increasingly important, where relevant information is first retrieved from external knowledge sources and then used by the model to generate grounded and evidence-based responses.
+
+Retrieval-Augmented Generation (RAG) is a framework designed to improve the factual reliability of Large Language Models (LLMs) by enabling them to retrieve and utilize external information during response generation. By accessing knowledge sources such as web documents or databases, RAG systems can incorporate up-to-date and verifiable information, making them more suitable for fact-checking and recent-event analysis.
+
+In essence, ~\citet{Lewis2020May} discusses RAG as a grounding mechanism that reduces reliance on the model’s internal parametric knowledge and encourages evidence-based generation. This allows model outputs to be supported by retrieved external evidence rather than solely by learned statistical patterns. So RAG
+has become a central component in modern fact-checking pipelines, especially in the context of FEVER-style tasks, where the system must retrieve evidence from a large corpus and use it to verify claims.
+
+~\citet{Lewis2020May} applied the Retrieval-Augmented Generation (RAG) framework to automated fact-checking on the FEVER dataset introduced by ~\citet{Thorne2018Jun}. In this approach, the system retrieves relevant evidence from Wikipedia and then reasons over the retrieved information to determine the veracity of a claim.
+
+Despite not relying on complex retrieval pipelines or intermediate retrieval supervision, RAG achieved competitive performance. For the three-way FEVER classification task, its results were within 4.3\% of state-of-the-art systems that used specialized architectures and extensive engineering. For binary classification, RAG achieved accuracy within 2.7\% of models trained using gold evidence sentences against ~\citet{Thorne2018Jun} , even though it retrieved evidence autonomously using only the input claim.
+
+Both the FEVER baselines presented in ~\citet{Schlichtkrull2023May} and ~\citet{Schlichtkrull2024Nov} utilized Google Search APIs and offline knowledge stores to retrieve evidence documents for claim verification. The retrieved evidence was then used by transformer-based models to reason about the claim and generate a verdict.
 
 \section{Retrieval Systems for Fact-Checking}
 
@@ -164,7 +131,7 @@ BM25 is especially effective at matching rare phrases, keywords, and specific en
 
 Dense Passage Retrieval (DPR) introduced a shift from traditional sparse retrieval methods such as BM25 and SPLADE toward dense dual-encoder architectures ~\citep{Karpukhin2020Nov}. Instead of relying on exact keyword matching, DPR uses BERT-based encoders to map queries and documents into a shared dense embedding space, enabling retrieval based on semantic similarity. This allows the model to capture latent semantic relationships and lexical variations, such as associating “bad guy” with “villain,” which sparse retrieval methods may fail to identify.
 
-Empirically, DPR significantly outperformed BM25, improving top-20 retrieval accuracy by 9\%–19\% on several benchmarks ~\citep{Karpukhin2020Nov}. Recent multimodal fact-checking frameworks such as ~\citet{Ullrich2026Mar} and ~\citet{Jung2026Mar} also employ dense embedding models, such as \textit{mxbai-embed-large-v1} and \textit{mxbai-embed}.
+Empirically, DPR significantly outperformed BM25, improving top-20 retrieval accuracy by 9\%–19\% on several benchmarks ~\citep{Karpukhin2020Nov}. Consequently, modern fact-checking and FEVER-style systems commonly combine dense vector retrieval approaches with traditional sparse retrieval techniques such as BM25 ~\citet{Schlichtkrull2024Nov}. Recent multimodal fact-checking frameworks such as ~\citet{Ullrich2026Mar} and ~\citet{Jung2026Mar} also employ dense embedding models, such as \textit{mxbai-embed-large-v1} and \textit{mxbai-embed}.
 
 \subsection{Hybrid Retrieval}
 
@@ -190,7 +157,15 @@ Instead of performing retrieval separately and combining results with Reciprocal
 
 However, unified indexing introduces significant computational challenges. Dense and sparse vectors follow very different distributions, and sparse vectors are extremely high-dimensional, making distance computation substantially more expensive than dense similarity calculations. In graph-based unified indexes, sparse distance computations can account for more than 60\% of total search time and may take up to 11 times longer than dense distance calculations.
 
+Early research in automated fact-checking primarily focused on textual claims and textual evidence. However, the increasing prevalence of multimodal misinformation has highlighted the need for systems capable of jointly processing both textual and visual information.
+
 \section{Multimodal Retrieval}
+
+Studies in multimodal misinformation further demonstrate that combining text with images can significantly increase the perceived credibility and spread of false claims. This has motivated the development of multimodal fact-checking approaches that incorporate visual evidence alongside textual reasoning ~\cite{Hameleers2020Feb}
+
+In multi-modal environments, the intersection of textual claims and visual evidence represents a primary vector for misinformation, where the deception often lies not in the falsehood of a single modality, but in the manipulated contextual connection between them.
+
+Early approaches to multimodal fact-checking, such as the work by ~\citet{Xu2024Mar}, utilized CLIP to jointly encode textual and visual information into a shared feature space. The extracted image and text representations were fused using attention mechanisms and bilinear pooling, after which a classifier was trained to predict the veracity of the claim.
 
 CLIP (Contrastive Language–Image Pre-training) is a multimodal model that learns shared representations of images and text through contrastive learning ~\cite{Radford2021Feb}. It jointly trains an image encoder and a text encoder, projecting both modalities into a common embedding space by maximizing similarity between matching image–text pairs and minimizing similarity for incorrect pairs.
 
