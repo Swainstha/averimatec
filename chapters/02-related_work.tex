@@ -1,21 +1,3 @@
-% Table: QA Generation Strategies of Competition Systems
-\begin{table}[ht]
-\centering
-\caption{Question-Answer (QA) Generation Strategies in AVERIMATEC Competition Systems}
-\label{tab:competition-systems-qa-strategies}
-\begin{tabular}{|l|p{10cm}|}
-\hline
-\textbf{Framework} & \textbf{QA Generation Strategy} \\
-\hline
-VILLAIN & Iterative synthesis: dedicated agent generates 20 QA pairs over four iterations (5 per round), synthesizing analysis from specialized agents to resolve evidentiary inconsistencies. \\
-REVEAL & Evidence accumulation loop: history-aware generator produces each new question based on evidence gathered in previous turns. \\
-XxP & Typed decomposition: generates 3–5 questions in strict JSON, each labeled as "text-related" or "image-related" to trigger specific retrieval pipelines. \\
-ADA-AGGR & Single-pass query expansion: generates one concise verification question per claim, used for ensemble retrieval. \\
-AIC CTU & Consolidated generation: single multimodal LLM call (GPT-5.1) formulates up to 10 questions and answers them using provided context. \\
-\hline
-\end{tabular}
-\end{table}
-
 \chapter{Related Work}
 \label{ch:relatedWork}
 
@@ -299,6 +281,24 @@ REVEAL & Semantic gap bridging: applies HyDE (Hypothetical Document Embeddings) 
 ADA-AGGR & Efficiency and filtering: aggressively downsamples images (8x) to reduce runtime, and filters retrieved images using an Image Answer Generation step for relevance. \\
 XxP & Selective multimodality: uses images for query formulation but relies on text-only evidence for final verdict and justification. \\
 AIC CTU & MMR diversification: applies Maximal Marginal Relevance (MMR, $\lambda=0.8$) for diverse, non-redundant retrieval; most cost-effective system (\$0.013/claim). \\
+\hline
+\end{tabular}
+\end{table}
+
+% Table: QA Generation Strategies of Competition Systems
+\begin{table}[ht]
+\centering
+\caption{Question-Answer (QA) Generation Strategies in AVERIMATEC Competition Systems}
+\label{tab:competition-systems-qa-strategies}
+\begin{tabular}{|l|p{10cm}|}
+\hline
+\textbf{Framework} & \textbf{QA Generation Strategy} \\
+\hline
+VILLAIN & Iterative synthesis: dedicated agent generates 20 QA pairs over four iterations (5 per round), synthesizing analysis from specialized agents to resolve evidentiary inconsistencies. \\
+REVEAL & Evidence accumulation loop: history-aware generator produces each new question based on evidence gathered in previous turns. \\
+XxP & Typed decomposition: generates 3–5 questions in strict JSON, each labeled as "text-related" or "image-related" to trigger specific retrieval pipelines. \\
+ADA-AGGR & Single-pass query expansion: generates one concise verification question per claim, used for ensemble retrieval. \\
+AIC CTU & Consolidated generation: single multimodal LLM call (GPT-5.1) formulates up to 10 questions and answers them using provided context. \\
 \hline
 \end{tabular}
 \end{table}
