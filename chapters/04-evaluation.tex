@@ -263,7 +263,7 @@ Top-$K$ (SPLADE, BGE, LongCLIP)             & 50  \\
 \end{tabular}
 \end{table}
 
-\subsection{RQ1: Contribution of Retrieval Components}
+\subsection{RQ1: How do the individual retrieval modalities (SPLADE, BGE, LongCLIP) and post-retrieval stages (cross-encoder reranking, MMR diversification) contribute to downstream fact-checking performance?}
 
 To answer \textbf{RQ1}, we perform an incremental ablation study on the retrieval pipeline using the validation set with ground truth questions. This isolates the effect of each retrieval modality and post-retrieval stage from the question generation component. Table~\ref{tab:retrieval_ablation} presents the results.
 
@@ -317,7 +317,7 @@ SPLADE+BGE+LongCLIP & 0.495 & 0.224 & 0.23 & 0.17 \\
 \end{tabular}
 \end{table}
 
-\subsection{RQ2: Iterative vs.\ Retrieval First QA Generation}
+\subsection{RQ2: How does iterative question-answer generation compare to a claim based retrieval for QA generation in terms of evidence quality and verdict accuracy?}
 
 To answer \textbf{RQ2}, we compare two QA generation strategies: (1)~iterative question generation, where questions are generated iteratively followed by evidence retrieval and answer generation ; and (2)~retrieval first QA generation, where all questions and answers are generated in a single VLM call after retrieving evidence. Both configurations use the full retrieval pipeline (SPLADE+BGE+LongCLIP+Cross-Encoder+MMR) and in-context learning.
 
@@ -372,7 +372,7 @@ Yes & 0.622 & 0.312 & 0.327 & 0.297\\
 \end{table}
 
 
-\subsection{RQ3: Effect of In-Context Learning}
+\subsection{RQ3: What is the effect of in-context learning on question generation quality and overall pipeline performance?}
 
 To answer \textbf{RQ3}, we examine the impact of in-context learning (ICL) on both generation strategies. In the ICL setting, BM25 is used to retrieve similar QA-pair examples from the training set, which are included in the VLM prompt as few-shot demonstrations.
 
@@ -400,7 +400,7 @@ To further illustrate the impact of ICL on verdict prediction, Figures~\ref{fig:
 \label{fig:confusion_matrix_retrieval_first}
 \end{figure}
 
-\subsection{RQ4: Comparison with State-of-the-Art Systems}
+\subsection{RQ4: How does the proposed pipeline compare to state-of-the-art systems on the AVerImaTeC shared task?}
 
 To answer \textbf{RQ4}, we compare our best pipeline configuration against the top-performing teams in the AVerImaTeC shared task. Tables~\ref{tab:team_comparison_val} and~\ref{tab:team_comparison_test} present results on the validation and test sets respectively.
 
