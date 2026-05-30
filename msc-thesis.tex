@@ -78,26 +78,30 @@
 
 
 %% ----------------------------------------------------------------
+\pagestyle{empty}
+\cleardoublepage
+\addtotoc{Declaration on the Use of AI Tools for Assignment Submission }
 \pagestyle{empty}  % No headers or footers for the following pages
 \includepdf[offset=25mm -25mm, scale=1, pages=1]{./DeclarationOfAI.pdf}
 
 % Page 2: Offset to the left (reversing the horizontal offset)
 \includepdf[offset=-25mm -25mm, scale=1, pages=2]{./DeclarationOfAI.pdf}
 \input{frontmatter/declaration}
-% \clearpage
+\clearpage
 \input{frontmatter/quote}
 \clearpage
 \input{frontmatter/abstract}
 \clearpage
 \input{frontmatter/ack}
 \clearpage
+\input{frontmatter/abbrev}
 
 \tableofcontents
 
 \setstretch{1.3}  % Return the line spacing back to 1.3
 
 \addtocontents{toc}{\vspace{2em}}  % Add a gap in the Contents, for aesthetics
-\input{frontmatter/abbrev}
+
 %% ----------------------------------------------------------------
 \mainmatter	  % Begin normal, numeric (1,2,3...) page numbering
 \pagestyle{fancy}  % Return the page headers back to the "fancy" style

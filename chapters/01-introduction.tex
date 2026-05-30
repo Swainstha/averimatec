@@ -22,13 +22,13 @@ Automated fact-checking uses natural language processing and machine learning to
 \section{Objectives}
 \label{sec:intro:objectives}
 
-The primary objective of this thesis is to develop and evaluate a hybrid multimodal dual-branch retrieval-augmented pipeline for automated fact-checking of image-text claims. Given a claim consisting of text and an associated image, the system must retrieve relevant evidence from a multimodal knowledge store, generate verification questions and answer them, and produce a grounded verdict with justification.
+The primary objective of this thesis is to develop and evaluate a \textit{hybrid multimodal dual-branch retrieval-augmented pipeline} for automated fact-checking of image-text claims. Given a claim consisting of text and an associated image, the system must retrieve relevant evidence from a multimodal knowledge store, generate verification questions and answer them, and produce a grounded verdict with justification.
 
 To systematically evaluate the proposed approach, we formulate the following research questions:
 
 \begin{description}
     \item[RQ1] How do the individual retrieval modalities (SPLADE, BGE, LongCLIP) and post-retrieval stages (cross-encoder reranking, MMR diversification) contribute to downstream fact-checking performance?
-    \item[RQ2] How does iterative question-answer generation compare to a claim-based retrieval for Question-Answer generation (single pass) in terms of evidence quality and verdict accuracy?
+    \item[RQ2] How does iterative question-answer generation compare to a \textit{claim-based retrieval for Question-Answer generation (single pass)} in terms of evidence quality and verdict accuracy?
     \item[RQ3] What is the effect of in-context learning on question generation quality and overall pipeline performance?
     \item[RQ4] How does the proposed pipeline compare to state-of-the-art systems on the AVerImaTeC shared task?
 \end{description}
@@ -36,12 +36,12 @@ To systematically evaluate the proposed approach, we formulate the following res
 \section{Approach and Contributions}
 \label{sec:intro:approach}
 
-We address the problem by designing an end-to-end multimodal fact-checking pipeline that integrates hybrid evidence retrieval with Vision-Language Model (VLM) reasoning. The pipeline operates in three stages: (1)~a hybrid multimodal dual-branch retrieval module, where text-related questions and claim text based retrieval are handled by a SPLADE+BGE branch (SPLADE+BGE $\rightarrow$ RRF $\rightarrow$ cross-encoder $\rightarrow$ MMR) and image-related questions and claim image based retrieval are handled by a LongCLIP branch (LongCLIP $\rightarrow$ RRF $\rightarrow$ MMR); (2)~VLM-driven question generation and answer extraction, implemented in both iterative and single-pass variants with optional semantic-based in-context learning; and (3)~grounded verdict prediction and justification generation. The entire pipeline runs on a single open-source 8B-parameter VLM (Qwen3-VL-8B-Instruct) without reliance on proprietary APIs.
+We address the problem by designing an end-to-end multimodal fact-checking pipeline that integrates hybrid multimodal evidence retrieval with Vision-Language Model (VLM) reasoning. The pipeline operates in three stages: (1)~a hybrid multimodal dual-branch retrieval module, where text-related questions and claim text based retrieval are handled by a SPLADE+BGE branch (SPLADE+BGE $\rightarrow$ RRF $\rightarrow$ Deduplication $\rightarrow$  cross-encoder $\rightarrow$ MMR) and image-related questions and claim image based retrieval are handled by a LongCLIP branch (LongCLIP $\rightarrow$ Deduplication $\rightarrow$ MMR); (2)~VLM-driven question generation and answer extraction, implemented in both iterative and single-pass variants with optional semantic-based in-context learning; and (3)~grounded verdict prediction and justification generation. The entire pipeline runs on a single open-source 8B-parameter VLM (Qwen3-VL-8B-Instruct) without reliance on proprietary APIs.
 
 The specific contributions of this thesis are:
 
 \begin{itemize}
-    \item A hybrid multimodal dual-branch retrieval architecture: for text-related retrieval, SPLADE+BGE are fused and refined (SPLADE+BGE $\rightarrow$ RRF $\rightarrow$ cross-encoder $\rightarrow$ MMR), while for image-related retrieval, LongCLIP is refined through rank fusion and diversification (LongCLIP $\rightarrow$ RRF $\rightarrow$ MMR). This architecture demonstrates that LongCLIP provides a 29\% improvement in evidence score over standard CLIP and that MMR diversification yields the significant gain in all metrics.
+    \item A hybrid multimodal dual-branch retrieval architecture: for text-related retrieval, SPLADE+BGE are fused and refined (SPLADE+BGE $\rightarrow$ RRF $\rightarrow$ Deduplication $\rightarrow$ cross-encoder $\rightarrow$ MMR), while for image-related retrieval, LongCLIP is refined through rank fusion and diversification (LongCLIP $\rightarrow$ Deduplication $\rightarrow$ MMR). This architecture demonstrates that LongCLIP provides a 29\% improvement in evidence score over standard CLIP and that MMR diversification yields significant gain in all metrics.
     \item A systematic comparison of iterative versus claim based retrieval (single pass) for QA generation strategies for retrieval-augmented fact-checking, showing that single pass approach outperforms iterative approaches by avoiding error propagation.
     \item An empirical analysis of in-context learning effects that reveals a generalization gap: ICL reduces validation accuracy but improves test performance, exposing majority-class bias in small imbalanced evaluation sets.
     \item A competitive open-source fact-checking system evaluated on the AVerImaTeC shared task, demonstrating competitive test-set performance using significantly fewer computational resources than proprietary MLLM-based systems.
@@ -53,9 +53,9 @@ The specific contributions of this thesis are:
 
 The remainder of this thesis is organized as follows:
 
-\textbf{Chapter~\ref{ch:relatedWork}} reviews related work in automated fact-checking, multimodal misinformation detection, retrieval-augmented generation, and the specific retrieval models (SPLADE, BGE, LongCLIP) that form the basis of our pipeline. This establishes the theoretical and methodological context for our approach.
+\textbf{Chapter~\ref{ch:relatedWork}} reviews related work in automated fact-checking, multimodal misinformation detection, retrieval-augmented generation, and different retrieval models that form the basis of our pipeline. This establishes the theoretical and methodological context for our approach.
 
-\textbf{Chapter~\ref{ch:approach}} presents the proposed pipeline in detail, covering the hybrid retrieval architecture, indexing strategies, question generation approaches (iterative and claim based retrieval for QA generation), answer extraction, and verdict prediction with justification generation.
+\textbf{Chapter~\ref{ch:approach}} presents the proposed pipeline in detail, covering the hybrid multimodal retrieval architecture, indexing strategies, question generation approaches (iterative and claim based retrieval for QA generation i.e. single pass), answer extraction, and verdict prediction with justification generation.
 
 \textbf{Chapter~\ref{ch:eval}} describes the experimental evaluation, including the AVerImaTeC dataset, evaluation methodology, and results organized by research question. This chapter also includes a discussion of findings, qualitative examples illustrating success and failure cases, and an error analysis identifying systemic failure patterns.
 

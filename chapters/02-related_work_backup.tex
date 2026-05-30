@@ -1,399 +1,284 @@
-
 \chapter{Related Work}
-\label{ch:related}
-
-\instructions{Page budget for Related Work: 10 - 15 pages
-%
-\begin{itemize}
-    \item Discuss the relevant literature related with your problem, in a coherent way to demonstrate that you have given due consideration to know: your problem and the possible sub-problems of interest in this work, the previous approaches, and their benefits and missing points or drawbacks.
-    \item It is not about concatenating summaries of papers. Rather, it is about to discuss the problem, its details and challenges (difficulties and/or opportunities) you focus on, all this by relying on previous work, comparing what some did, what some else improved or added, what is missing, and so on.
-    \item Moreover, mind to keep the focus in the areas you care during your discussion (since you control the story), and to remark what you consider useful, interesting, or challenging.
-    \item In some cases it could be necessary and/or natural to have, first, an introduction (which could discuss works on more general aspects of the problem), and then split the rest of the chapter in sections, each discussing a particular aspect of the problem.
-    \item If you define a new task, or create or improve a method, or develop a test collection, or perform a missing major evaluation, explain why it is interesting, why is different or helpful versus previous works.
-    \item Mind that the reader may have never heard about these things. You need to discuss them in such detail that it is possible to follow later parts of the thesis without having to consult external resources.
-    \item Always use natbib!
-    \item Use \texttt{\textbackslash\.citet\{\}} for textual citation. For example, ``\citet{Balog:2018:Book} proposed...''
-    \item Use \texttt{\textbackslash\.citep\{\}} for parenthetical citation. For example, ``In \citep{Zhang:2020:KDD} the idea of ..''
-    \item Here is an example of a PhD thesis:  \citet{Maxwell:2019:PhDThesis} 
-    \item Here is how a Journal article would look in the Bibliography: \citet{Sanderson:2010:FnTIR}
-    \item Never write out Smith et al., there is a \texttt{\textbackslash\.citeauthor{}\{\}} command for that (but most likely what you're looking for is actually \texttt{\textbackslash\.citet\{\}}.
-    \item Check the corresponding Bib entry, for citing online documentation~\citep{Rasa:2022:doc}; if you just need to include an URL of a website/code/dataset, use a footnote instead.\footnote{\url{https://rasa.com}}
-\end{itemize}
-}
-
-The rapid growth of social media platforms and online content-sharing systems has significantly increased the spread of misinformation. False or misleading information can now propagate globally within minutes, often reaching large audiences before verification occurs. This problem has become particularly critical in domains such as public health, politics, crisis reporting, and social events, where misinformation can influence public opinion, create panic, or distort factual understanding.
-A major challenge in modern misinformation is that it is increasingly multimodal. Many misleading claims are accompanied by images, videos, or screenshots that provide apparent visual credibility to false narratives. In numerous cases, authentic images are reused in misleading contexts, attached to fabricated stories, or combined with inaccurate textual claims. As a result, verifying such claims requires not only textual reasoning but also understanding the relationship between visual and textual information.
-Traditional manual fact-checking performed by professional organizations is effective but difficult to scale due to the enormous volume of online content. This limitation has motivated extensive research into automated fact-checking systems. Early automated approaches primarily focused on textual verification, where the goal was to retrieve supporting evidence and determine whether a claim was true or false. However, text-only systems often struggle when misinformation relies heavily on visual manipulation, image miscontextualization, or cross-modal inconsistencies.
-Recent advances in large language models, retrieval systems, and vision-language models have enabled the development of more sophisticated multimodal fact-checking pipelines. In particular, retrieval-based approaches have become increasingly important because the quality of retrieved evidence directly influences downstream verification performance. Modern systems therefore combine semantic retrieval, lexical retrieval, and multimodal retrieval techniques to improve evidence coverage and robustness.
-Despite these advances, several challenges remain unresolved. Existing systems often:
-rely heavily on textual retrieval while underutilizing visual evidence,
-struggle to identify reused or miscontextualized images,
-retrieve redundant or noisy evidence,
-and fail to effectively combine semantic, lexical, and visual retrieval signals.
-Furthermore, many image-text retrieval models are optimized for short captions rather than the longer contextual evidence commonly encountered in fact-checking datasets.
-This thesis addresses these challenges by proposing a hybrid multimodal retrieval framework for automated fact-checking. The proposed approach integrates dense retrieval using BGE, sparse retrieval using SPLADE, and image-text retrieval using LongCLIP to retrieve diverse and relevant evidence from both textual and visual sources. The system further combines retrieval outputs using Reciprocal Rank Fusion (RRF), cross-encoder reranking, and Maximum Marginal Relevance (MMR) to improve retrieval quality and evidence diversity.
-The purpose of this chapter is to review the existing literature relevant to automated fact-checking, multimodal misinformation analysis, retrieval-augmented systems, and multimodal retrieval techniques. The discussion focuses on the strengths and limitations of previous approaches, the challenges associated with multimodal fact verification, and the research gaps that motivate the proposed system.
+\label{ch:relatedWork}
 
 \section{Traditional Fact-Checking}
 
-Traditional fact-checking is the process of manually verifying the accuracy of a claim.Before the emergence of automated fact-checking approaches, verification of information was primarily performed manually by journalists, researchers, and professional fact-checking organizations. Traditional fact-checking systems rely heavily on human expertise to investigate claims, analyze evidence, consult reliable sources, and publish verification reports. These systems play an important role in combating misinformation by providing high-quality, carefully reviewed assessments of public claims and viral content.
+Traditional fact-checking is the process of manually verifying the accuracy of a claim. Before the emergence of automated fact-checking approaches, verification of information was primarily performed manually by journalists, researchers, and professional fact-checking organizations. Traditional fact-checking systems rely heavily on human expertise to investigate claims, analyze evidence, consult reliable sources, and publish verification reports. These systems play an important role in combating misinformation by providing high-quality, carefully reviewed assessments of public claims and viral content ~\cite{QuestToAutomateFactChecking2015Oct} .
 
-Manual fact-checking, while serving as a cornerstone of journalistic accountability, is increasingly hindered by structural and temporal constraints that limit its effectiveness in the modern digital landscape. The following analysis outlines the primary limitations identified in the sources.
+Manual fact-checking remains an essential component of journalistic accountability; however, its effectiveness is increasingly limited in the modern digital environment due to several operational and structural challenges as discussed by ~\citet{QuestToAutomateFactChecking2015Oct} and ~\citet{FactChecking2025Mar}.
 
-\begin{itemize}
-    \item \textbf{Temporal Latency and the "Speed Gap"}: The most significant limitation of the manual fact-checking process is its inherent lack of speed. Fact-checking is described as an intellectually demanding and laborious task that requires extensive research and advanced writing . A typical check requires approximately one full day to research and write, with more complex claims demanding two or more days . This creates a critical "speed gap" between the moment a false statement is made and the publication of a correction . During this interval, misinformation can circulate unchecked, allowing false narratives to take root before they can be officially refuted .
+\begin{itemize} 
+    \item \textbf{Temporal Latency}: Manual fact-checking is a time-intensive process that requires extensive research and verification. As a result, corrections are often published long after misinformation has already spread widely online, creating a significant speed gap.
     
-    \item \textbf{Constraints on Scalability and Volume}: Manual fact-checking is not scalable enough to match the volume of misinformation. Human journalists are unable to monitor and verify the sheer quantity of claims produced during live events, such as debates or constant social media updates, in real-time . Because the process is so time-intensive, a single news organization can only produce a limited number of checks per day, which is insufficient for the high velocity and scale of misinformation today .
+    \item \textbf{Limited Scalability}: Human fact-checkers cannot keep pace with the large volume of claims generated through social media, live events, and digital news platforms. Consequently, only a limited number of claims can be verified within a given timeframe.
     
-    \item \textbf{Lack of Structural Data and Centralization}: The efficacy of manual fact-checking is further diminished by fragmented dissemination. Most traditional fact-checkers utilize older, blog-style platforms that publish work as unstructured plain text . This format lacks the "structured journalism" metadata—such as specific tags for the speaker, statement, and evidence—necessary for automated tools to easily digest and reuse the information .
-Furthermore, there is no single central repository for these verified facts . Because checks are scattered across various individual news archives, they are difficult for the public to find during live events and lead to an inefficient duplication of effort, where different organizations may spend hours independently verifying the same claim because there is no shared database .
+    \item \textbf{Lack of Structured and Centralized Data}: Fact-checks are commonly published in unstructured textual formats and distributed across separate platforms. The absence of standardized metadata and centralized repositories makes retrieval, reuse, and automated processing difficult.
     
-    \item \textbf{Structural Constraints and Limited Reach}: From a structural perspective, traditional fact-checking lacks the direct line of communication to users that social media platforms enjoy. Because they are centralized and often detached from the networks where misinformation spreads, these organizations have less reach and no consistent, data-driven measure of their actual impact on public discourse. Unlike decentralized models that can leverage network data to ensure a diversity of perspectives, traditional models rely on a limited number of employees, which restricts their ability to scale and maintain perceived ideological neutrality ~\cite{QuestToAutomateFactChecking2015Oct}.
-    \item \textbf{Ideological Capture and Perceptions of Bias}: Traditional fact-checking organizations face intense scrutiny regarding perceived and actual political bias. This demographic reality leads to "ideological capture," where the lack of diverse viewpoints within a small, centralized staff—the "bottleneck" of analysis—contributes to a public perception that fact-checkers are partisan actors rather than neutral arbiters. Consequently, these institutions lack effective internal mechanisms to combat such perceptions, which ultimately reduces their ability to combat misinformation effectively ~\cite{FactChecking2025Mar}.
+    \item \textbf{Restricted Reach and Structural Constraints}: Traditional fact-checking organizations often lack direct integration with the platforms where misinformation spreads. Their dependence on relatively small teams further limits scalability and audience reach ~\cite{QuestToAutomateFactChecking2015Oct}.
+    
+    \item \textbf{Perceived Bias}: Fact-checking organizations frequently face criticism regarding political or ideological bias. Such perceptions can reduce public trust and weaken the impact of verified corrections ~\cite{FactChecking2025Mar}.
 \end{itemize}
 
-To overcome these limitations, there has been a growing interest and a rapid development in automated fact-checking systems that can operate at scale and in real-time. These systems leverage advances in natural language processing, machine learning, and information retrieval to assist human fact-checkers or to perform verification tasks autonomously. 
+To address these limitations, significant attention has been directed towards automated fact-checking systems capable of operating at scale and in real time. These systems utilize advances in natural language processing, machine learning, and information retrieval to support human fact-checkers or perform verification tasks automatically.
 
 \section{Automated Fact-Checking}
 
-Automated fact-checking is the pursuit of a computer-based platform capable of detecting factual claims as they appear in real-time and providing an immediate accuracy rating without human intervention. Often referred to in the research community as the "Holy Grail" of computational journalism, a fully automated system is characterized by being instant, accurate, and accountable—meaning it self-documents its data sources and analysis for transparency ~\cite{QuestToAutomateFactChecking2015Oct}.
+Automated fact-checking refers to the development of computer-based systems capable of detecting factual claims and verifying their accuracy in real time with minimal human intervention. Often described as the “Holy Grail” of computational journalism, an ideal automated fact-checking system is expected to be fast, accurate, and transparent in its reasoning and evidence usage ~\cite{QuestToAutomateFactChecking2015Oct}.
 
-Automated fact checking is a challenging task that requires the system to perform several complex subtasks, including claim detection, evidence retrieval, and claim verification. The goal is to determine the veracity of a claim by retrieving relevant evidence from a large corpus of documents and analyzing the relationship between the claim and the evidence.
+Automated fact-checking is a complex task whose objective is to determine the veracity of a claim by retrieving relevant evidence from large information sources and analyzing the relationship between the claim and the retrieved evidence.
 
-The "ever-increasing amounts of textual information" available today, combined with the ease of sharing it online, has created a high demand for automated verification. 
+The rapid growth of online textual content and the ease of sharing information online have further increased the demand for scalable and automated verification systems.
 
-Vlachos and Riedel (2014) constructed a dataset for claim verification consisting of 106 claims, selecting data from fact-checking websites such as PolitiFact, taking advantage of the labelled claims available there. However, in order to de-velop claim verification components we typically require the justification for each verdict, includ-ing the sources used. While this information is usually available in justifications provided by the journalists, they are not in a machine-readable form ~\cite{Vlachos2014Jun}.
+Early research in automated fact-checking focused on constructing datasets for claim verification. ~\citet{Vlachos2014Jun} introduced a dataset containing 106 claims collected from fact-checking platforms such as PolitiFact. Although these claims included verdicts and journalistic justifications, the supporting evidence was not available in a machine-readable format, limiting its usability for automated verification systems.
 
-Wang (2017) extended this approach by including all 12.8K claims available by Politifact via its API, however the justification and the evidence contained in it was ignored in the experiments as it was not machine-readable. Instead, the claims were classified considering only the text and the metadata related to the person making the claim. While this rendered the task amenable to current NLP/ML methods, it does not allow for verification against any sources and no evidence needs to be returned to justify the verdicts ~\cite{Wang2017Jul}.
+Later, ~\citet{Wang2017Jul} expanded this work by utilizing approximately 12.8K claims obtained through the PolitiFact API. However, the experiments ignored the justification and evidence associated with the claims due to the lack of structured representations. Instead, claim classification relied only on textual content and metadata related to the speaker. While this simplified the task for machine learning models, it does not allow for verification against any sources and no evidence needs to be returned to justify the verdicts.
 
-The Fake News challenge (Pomerleau and Rao, 2017) modelled verification as stance classification: given a claim and an article, predict whether the article supports, refutes, observes (neutrally
-states the claim) or is irrelevant to the claim. It consists of 50K labelled claim-article pairs, combining 300 claims with 2,582 articles. The claims and the articles were curated and labeled by journalists and the dataset was first proposed
-by Ferreira and Vlachos (2016), who only classified the claim w.r.t. the article headline instead of the whole article and the systems were provided with the sources to verify against, instead of having to retrieve them ~\cite{PomerleauDelip2017Jun}.
+The Fake News Challenge further approached fact-checking as a stance detection problem, where the objective was to determine whether an article supports, refutes, discusses, or is unrelated to a given claim. The dataset consisted of around 50K labeled claim–article pairs derived from 300 claims and 2,595 articles. Initially proposed by ~\citet{Ferreira2016Jun}, the task focused on classifying claims using article headlines, while the relevant source articles were already provided, eliminating the need for evidence retrieval ~\cite{PomerleauDelip2017Jun}.
 
-~\citet{Thorne2018Jun} introduced a new style of fact-checking characterized by its scale and retrieval-based complexity FEVER: Fact Extraction and VERification. It consists of 185,445 claims verified against Wikipedia ~\cite{Thorne2018Jun}.
+Later, ~\citet{Thorne2018Jun} introduced \textit{FEVER (Fact Extraction and VERification)}, a large-scale benchmark for automated fact-checking consisting of 185,445 claims verified against Wikipedia. Unlike earlier approaches, FEVER introduced a retrieval-based verification framework in which systems must retrieve relevant evidence before determining claim veracity.
 
-Key components of the FEVER-style approach include:
+The FEVER framework was characterized by three main labels: SUPPORTED, REFUTED, and NOT ENOUGH INFO. In addition to predicting the correct label, systems were required to retrieve sentence-level evidence that justifies the verdict. Many claims also required multi-hop reasoning, where evidence must be combined from multiple sentences or documents.
 
-\begin{itemize}
-    \item \textbf{Three-Way Classification}: Claims are labeled as SUPPORTED, REFUTED, or NOTENOUGHINFO.
-    
-    \item \textbf{Evidence Retrieval}: systems are not given the evidence; they must retrieve it from a massive document collection.
-    \item \textbf{Sentence-Level Justification}: For a verdict to be considered correct, the system must return the specific sentences that form the necessary evidence.
-    \item \textbf{Complex Evidence Composition}: FEVER-style claims often require multi-hop inference, where evidence must be composed from multiple sentences (16.82\% of cases) or even multiple pages (12.15\% of cases).
+By integrating evidence retrieval and textual inference, FEVER established a more realistic and challenging benchmark for automated fact-checking research.
 
-\end{itemize}
+However this dataset contain purpose-made claims derived from Wikipedia, and thus are not representative of the real-world misinformation that circulates online. The claims in FEVER were artificially generated by altering sentences from Wikipedia, which may not capture the complexity, nuance, and multimodal nature of real-world misinformation.
 
-By requiring both information retrieval and textual inference, FEVER serves as a challenging testbed for developing new methods in reading comprehension and claim extraction.
+To address these limitations, ~\citet{Schlichtkrull2023May} introduced AVERITEC, a fact-checking dataset containing 4,568 real-world claims collected from professional fact-checking organizations. Unlike the initial FEVER, AVERITEC incorporated realistic web-retrieved evidence, structured question-answer based retrieval, and detailed justifications explaining how evidence supports or refutes a claim. The dataset also avoided common issues such as context dependence, insufficient evidence, and temporal leakage, making it more suitable for practical fact-checking research.
 
-However this dataset contain purpose-made claims derived from Wikipedia, and thus are not representative of the real-world misinformation that circulates online. The claims in FEVER are artificially generated by altering sentences from Wikipedia, which may not capture the complexity, nuance, and multimodal nature of real-world misinformation.
-
-~\citet{Schlichtkrull2023May} introduced a new dataset for fact checking, AVERITEC, which combines real-world claims with realistic evidence retrieved from the web, as well as justifications for veracity labels. We formulate retrieval as question generation and answering, providing a structured representation of the evidence and reasoning supporting or refuting the claim. The free-text justifications detail how the evidence is used to reach the verdict, including cases of conflicting
-evidence, matching best practises for human fact-checkers. This dataset consists of 4,568 real world claims. They have avoided, common pitfalls including  context dependence,
-evidence insufficiency, and temporal leakage, which are common in other datasets. The claims in AVERITEC are sourced from real-world fact-checking organizations, making it more representative of the types of misinformation encountered in practice. Additionally, the dataset includes realistic evidence retrieved from the web, which adds to its authenticity and relevance for developing practical fact-checking systems ~\cite{Schlichtkrull2023May}.
-
-These datasets however focus on textual claims and evidence, while in the real world, misinformation often involves multimodal content, such as images, videos, and screenshots. This has led to the emergence of multimodal fact-checking research, which aims to verify claims that involve both textual and visual information.
+However, both FEVER and AVERITEC primarily focused on textual verification, whereas real-world misinformation frequently involves multimodal content such as images, videos, and screenshots. This limitation had motivated the development of multimodal fact-checking approaches that jointly analyze textual and visual information.
 
 \section{Multimodal Fact Checking}
 
-Recent studies estimate that approximately 80\% of online claims are multimodal involving both text and media ~\citet{Dufour2024May} and among these media, images are the most prevalent media type. So these days, fact checking cannot be done only using the textual claims and textual evidences, it needs a combined approach involving both image claims, image evidences and image-text alignment.
+Recent studies estimate that nearly 80\% of online claims are multimodal, involving both textual and visual content ~\cite{Dufour2024May}. Among different media types, images are the most commonly used in online misinformation. Consequently, modern fact-checking systems cannot rely solely on textual claims and textual evidence. Effective verification increasingly requires multimodal approaches that jointly analyze textual claims, visual evidence, and the relationship between images and text.
 
-~\citet{Cao2025May} introduced a new dataset for multimodal fact checking, AVERIMATEC (Automatic Verification of Image-Text Claims) which consists of 1,297 real world image text claims. Each claim
-is annotated with question-answer (QA) pairs containing evidence from the web.  In addition, each claim is
-annotated with metadata information, a veracity label based on retrieved evidence and a textual
-justification, explaining how the verdict is reached.
+To support research in multimodal fact-checking, ~\citet{Cao2025May} introduced AVerImaTeC  (Automatic Verification of Image-Text Claims), a dataset containing 1,297 real-world multimodal claims composed of both images and text in the FEVER 9 workshop. Each claim was annotated with question-answer evidence pairs retrieved from the web, along with metadata, veracity labels, and textual justifications explaining how the final verdict is derived.
 
-\section{Retrieval-Augmented Multimodal Fact-Checking Pipelines}
+\section{AVerImaTeC  Competition Systems Overview}
 
-\subsection{Retrieval-Augmented Generation (RAG) for Fact-Checking}
+Recent multimodal fact-checking systems increasingly combine evidence retrieval with multimodal reasoning and question-answer generation. Using the AVerImaTeC  dataset, ~\citet{Cao2025May} proposed a retrieval-based framework consisting of three main components: a question generation module that formulates questions from the claim, a question answering module that retrieves evidence from the web, and a claim verification module that predicts claim veracity using the retrieved evidence.
 
-Large Language Models (LLMs) have demonstratred impressive capabilities in natural language understanding and egenration and have been used as fact checking tools.
-However according to ~\citet{Proma2025Feb} and ~\citet{Lewis2020May}, Large language models (LLMs) fail in fact-checking primarily because they struggle to ground their responses in real, credible news sources and exhibit a systemic bias in source selection.
-When prompted to provide evidence for claims LLMs frequently invent non-existent headlines and articles. This is because LLMs are limited by their training data's "cut-off date."
-This means they are often ill-equipped to fact-check recent events that occurred after their training was finalized. LLMs are prone to generating false information with a high degree of confidence.
-This becomes dangerous because users tend to place high trust in LLM responses, making them more susceptible to the misinformation the model generates.
+By explicitly incorporating evidence retrieval and structured reasoning, this approach improved interpretability and provides evidence-based justifications for its predictions, addressing key limitations of earlier multimodal fact-checking methods.
 
-This results in the need to external evidences to ground the reasoning of the model, and thus the need for retrieval systems to retrieve relevant evidence from the web or a large corpus of documents. This naturally introduces Retrieval-Augmented Generation (RAG) approaches, where the model retrieves relevant information from an external source and uses it to generate a response. 
-Retrieval-Augmented Generation (RAG) is a specialized pipeline designed to enhance the accuracy of large language models (LLMs) by allowing them to access and use external information during the generation process.
-One of the major pitfalls of standard LLMs is their tendency to "hallucinate" or invent non-existent sources. RAG helps solve this by integrating external search capabilities, such as web searches, which can provide the model with real, credible evidence to support its claims.
-Standard LLMs are limited by "training cut-offs," meaning they cannot accurately fact-check events that occurred after their training data was finalized.
-RAG allows the system to retrieve current information from the internet or specific databases, making it more reliable for reporting on recent events.
-In summary, RAG acts as a "guardrail" for base systems, moving beyond simple prompting to ensure the model's output is supported by actual external evidence rather than just its internal statistical patterns ~\citep{Lewis2020May}.
+The multimodal fact-checking systems developed for the AVerImaTeC shared task represent a diverse range of architectural philosophies, all centered on a Retrieval-Augmented Generation (RAG) framework. At a high level, these systems are designed to verify claims by gathering external evidence from textual and visual sources before synthesizing a final verdict using Multimodal Large Language Models (MLLMs)
 
-In the context of automated fact-checking, retrieval-augmented generation (RAG) has emerged as a powerful approach to enhance the capabilities of large language models (LLMs) by allowing them to access and utilize external information during the generation process. This is particularly important in fact-checking tasks, where the accuracy of the model's output is heavily dependent on the quality and relevance of the retrieved evidence. So RAG
-has become a central component in modern fact-checking pipelines, especially in the context of FEVER-style tasks, where the system must retrieve evidence from a large corpus and use it to verify claims.
+~\citet{Tariq2026Mar} proposed REVEAL (Retrieval-Enhanced Verification with Evidence Accumulation Loop) which emphasized iterative evidence gathering and reasoning. Instead of relying on a single retrieval step, it progressively refined the search process based on previously collected evidence. The system combined textual and visual retrieval strategies to improve evidence coverage and reduce the gap between claims and supporting or refuting evidence. Its key contribution was to maintain an evidence accumulation loop that enables more informed and robust verification decisions.
 
+~\citet{Tsoneva2026Mar} proposed Xxp system which treated multimodality as a controllable design variable. It decomposes claims into specific text-related or image-related questions and applies targeted retrieval strategies for each. A key philosophical choice in this architecture is the reliance on text-only evidence for the final verdict, based on the hypothesis that textual grounding is currently more stable for veracity assessment.
 
-~\citet{Lewis2020May} used the RAG approach for automated fact checking in the FEVER dataset by ~\citet{Thorne2018Jun}, where RAG was used to retrieve evidences from Wikipedia relating to the claim and then reason over the evidence to classify the claim. For 3-way classification, RAG scores are within 4.3% of
-state-of-the-art models, which are complex pipeline systems with domain-specific architectures and
-substantial engineering, trained using intermediate retrieval supervision, which RAG does not require. For 2-way classification, we compare against ~\citet{Thorne2018Jun}, who train RoBERTa
-to classify the claim as true or false given the gold evidence sentence. RAG achieves an accuracy
-within 2.7\% of this model, despite being supplied with only the claim and retrieving its own evidence.
-Both the baselines for Fever competition in ~\citet{Schlichtkrull2023May} and ~\citet{Schlichtkrull2024Nov} have used Google Search API to retrieve evidence documents from the internet and have also created retrived evidences from alternative offline knowledge stores, to allow for
-inexpensive experimentations with a variety of retrieval strategies, which forms the basis for  transformer models to reason with the evidence to generate a veridct.
-Classical TF–IDF/BM25 retrieval limited earlier pipeline QA systems which had a low recall value affecting the retrieval quality. ~\citet{Karpukhin2020Nov} introduced Dense Passage Retrieval (DPR), training dual BERT encoders to embed questions and passages into a shared space. DPR improved top 20 recall by 9–19 pp over BM25 and became the de facto index for RAG models. Modern RAG implementation for evidence retrieval and in fever competitions, vector-based dense retrieval systems were common , along with BM25 ~\citet{Schlichtkrull2024Nov}.
+~\citet{Upravitelev2026Mar} proposed ADA-AGGR framework which emphasized breadth in evidence gathering by running multiple retrieval methods—textual, image-only, and multimodal—simultaneously for every claim
+. It is notable for its focus on operational efficiency, employing aggressive visual downsampling to drastically reduce processing time while maintaining high verification quality.
 
+~\citet{Ullrich2026Mar} proposed AIC CTU system which prioritized simplicity and cost-effectiveness, utilizing a modular RAG pipeline that is easily reproducible. It relies on a dual-retriever approach that combines offline textual search with real-time Reverse Image Search (RIS), achieving competitive performance with minimal computational overhead.
 
-Early work in automated fact-checking primarily focused on textual claims and evidence, but the rise of multimodal misinformation has necessitated the development of systems that can handle both text and images.
+~\citet{Jung2026Mar} proposed VILLAIN which utilizes a sophisticated multi-agent architecture where specialized VLM agents operate across sequential stages. It focuses on knowledge enrichment by proactively crawling the web to fill missing data and uses dedicated agents to perform modality-specific and cross-modal analyses to resolve inconsistencies among evidences.
 
-Beyond text-only settings, multimodal disinformation research shows that pairing text with images can substantially increase the
-perceived credibility and spread of false claims,
-motivating fact-checking approaches that incorporate visual evidence  ~\citet{Hameleers2020Feb}.
+\section{Retrieval-Augmented Generation (RAG) for Fact-Checking}
 
-In multi-modal environments, the intersection of textual claims and visual evidence represents a primary vector for misinformation, where the deception often lies not in the falsehood of a single modality, but in the manipulated contextual connection between them.
+Large Language Models (LLMs) have demonstrated strong capabilities in natural language understanding and generation, leading to their adoption in automated fact-checking tasks. However, studies by ~\citet{Proma2025Feb} and ~\citet{Lewis2020May} highlight several limitations that reduce their reliability for factual verification.
 
-\begin{itemize}
-    \item \textbf{Image Reuse and Out-of-Context Media}: A prevalent strategy in multi-modal misinformation involves the deployment of out-of-context media, categorized in the literature as a form of fabricated content. In these instances, a news report or social media post utilizes "auxiliary images" that are factually authentic but belong to irrelevant events, effectively repurposing real imagery to support a false current narrative
-    
-    \item \textbf{Misleading Captions and False Connections}: The category of "False Connection" is identified as one of the most common types of multi-modal misinformation. This occurs when modalities—specifically captions or titles—do not support the accompanying visual content. These misleading captions are frequently designed as clickbait, using provocative or sensationalist headlines to capture user attention despite a lack of contextual consistency with the image. Such discrepancies are often intentionally subtle to exploit the fact that users frequently skim textual content carelessly while being more "favorably attracted" to the visual modality
-    
-    \item \textbf{Manipulated Narratives and Cross-Modal Discordance}: Sophisticated misinformation often involves manipulated narratives where the individual components (text and image) may be credible in isolation, but their combination creates a deceptive whole. Also manipulated content is created when a valid visual information is edited or altered—such as through Deepfake technology—specifically to support these fabricated narratives. Detecting these narratives requires moving beyond uni-modal analysis to identify cross-modal discordance ~\cite{Abdali2024Nov}.
-\end{itemize}
+A major challenge is that LLMs often fail to ground their responses in credible and verifiable sources. When asked to provide supporting evidence, models may generate fabricated articles, headlines, or citations. Additionally, because LLMs are constrained by the temporal limits of their training data, they struggle to verify recent events that occurred after the training cutoff date. These issues are further compounded by the tendency of LLMs to produce incorrect information with high confidence, which can mislead users who place significant trust in model-generated responses.
 
-Early work in multimodal fact checking ~\citet{Xu2024Mar} used CLIP, where its visual and text encoders are used to encode the image and the text of the claim to convert to the same feature space and then the attention mechanism and the bilinear pooling are used to fuse the two vectors , and then a classifier is trained on top of this representation to predict the veracity of the claim. However, this approach does not explicitly retrieve evidence from external sources, which limits its ability to provide justifications for its predictions.
+In essence, ~\citet{Lewis2020May} discusses Retrieval-Augmented Generation (RAG) as a grounding mechanism that reduces reliance on the model’s internal parametric knowledge and encourages evidence-based generation. So RAG has become a central component in modern fact-checking pipelines, especially in the context of FEVER-style tasks, where the system must retrieve evidence from a large corpus and use it to verify claims.
 
-similarly the work done by ~\citet{Abdullah2026Jan} introduces an ensemble-based framework that integrates textual and visual data using ViLBERT’s two-stream architecture, incorporates VADER sentiment analysis to detect emotional language, and uses Image–Text Contextual Similarity to identify mismatches between visual and textual elements. These features are processed through the Bi-GRU classifier, Transformer-XL, DistilBERT, and XLNet, combined via a stacked ensemble method with soft voting, culminating in a T5 metaclassifier that predicts the outcome for robustness.
-While this approach effectively combines multiple modalities and models, it does not focus on evidence retrieval or the interpretability of its predictions, which are crucial for practical fact-checking applications.
+~\citet{Lewis2020May} applied the Retrieval-Augmented Generation (RAG) framework to automated fact-checking on the FEVER dataset introduced by ~\citet{Thorne2018Jun}. In this approach, the system retrieves relevant evidence from Wikipedia and then reasons over the retrieved information to determine the veracity of a claim. Despite not relying on complex retrieval pipelines or intermediate retrieval supervision, RAG achieved competitive performance. For the three-way FEVER classification task, its results were within 4.3\% of state-of-the-art systems that used specialized architectures and extensive engineering.
 
-Embedding models like ColPali ~\cite{Faysse2024Jun} encode visual and textual features within multi-vector embeddings
-and combine them with the late-interaction mechanism from ColBERT ,allowing for the semantic comparison between texual queries and multimodal image patches and enabling state-of-the-art results on multi-modal retrieval benchmarks.
+Both the FEVER baselines presented by ~\citet{Schlichtkrull2023May} and ~\citet{Schlichtkrull2024Nov} utilized Google Search APIs and offline knowledge stores to retrieve evidence documents for claim verification. The retrieved evidence was then used by transformer-based models to reason about the claim and generate a verdict. Similarly all the top frameworks in the AVerImaTec competition deployed RAG as a central component in their pipeline ~\cite{Cao2026Mar}.
 
-~\citet{Duwal2025May} propose a graph-based method that evaluates the consistency between the image and the caption by constructing two graph representations: an evidence graph, derived from online textual evidence, and a claim graph, from the claim in the caption. Using graph neural networks (GNNs) to encode and compare these representations, their framework then evaluates the truthfulness of image-caption pairs.
+\section{Text Retrieval System}
 
-Recent systems combine retrieval with multimodal reasoning and QA generation. in the new AVERIMATEC dataset, ~\citet{Cao2025May} proposed a new approach for multimodal fact checking that explicitly incorporates evidence retrieval. The system consists of three main components: a question generation module that generates questions based on the claim, a question answering module that retrieves evidence from the web to answer the generated questions, and a claim verification module that uses the retrieved evidence to predict the veracity of the claim. This approach allows for more interpretable predictions and provides justifications based on retrieved evidence, addressing some of the limitations of previous methods.
+\subsection{Sparse Retrieval}
 
-~\citet{Upravitelev2026Mar} have used VLM(Visual Language Model) in their  ADA-AGGR paper to generate a single concise verification question for each claim, and have used an ensemble evidence retrieval comprising of text retreival using BM25 followed by dense retrieval to rerank the top results, a image retrieval for find relevant images based solely on visual data and a textualclaim, the generated question and the claim images are fused into a single query to retriee relevant multimodal evidence from the web.  For Each retrieved image, a VLM is prompted with the image, the original claim and the generated
-question to prodeuce a concise answer based strictly on the visual evidence. During this step, the model also performs a binary check; if an image is determined to be irrelevant to the question, it is filtered out to prevent misleading the final verdict.
-The system aggregates the top textual and image-based evidence (often limited to 10 items).The VLM analyzes this aggregated evidence to provide a verdict (e.g., Supported, Refuted, or Not Enough Evidence) and a concise justification that cites specific evidence items. To make this process viable for real-world deployment, developers can use aggressive visual downsampling—shrinking evidence images by a factor of up to 8—which can reduce processing time by over 6 times while maintaining comparable verification quality.
-However, this approach relies on a single question generation step and may not fully capture the complexity of the evidence or the claim, which can limit its interpretability and robustness.
+Sparse retrieval is an information retrieval technique that identifies relevant documents through exact matching of query terms and document tokens using statistical word-frequency information. Due to their efficiency and scalability, they have been widely adopted as first-stage retrievers in large-scale information retrieval systems ~\cite{Wang2022Aug}.
 
-~\cite{Ullrich2026Mar} follow a similar RAG based approach called AIC CTU, where they used a text retriever and image based retrieval using RIS, but they provide the retrieved sources directly to MLLM such as GPT-5.1 before generating a question. With a few shot examples, the MLLM fromulates 10 questions and answers based on the retrieved evidence, and then uses these question answer pairs to predict the veracity of the claim. This approach is more efficient as it does not require a separate question generation step, but it may be less interpretable as the MLLM is generating both the questions and answers based on the retrieved evidence.
-Here question answer pairs are generated in a single step after retrieving the evidence, which may not allow for a detailed analysis of the evidence or the claim, and may also lead to less interpretable predictions.
-Furthermore, the approach relies heavily on the quality of the retrieved evidence, and if the retrieval step fails to retrieve relevant information, the question-answer generation and subsequent veracity prediction may be compromised.
-Also there is risk of hallucination in the question-answer generation step, where the MLLM may generate questions and answers that are not grounded in the retrieved evidence, leading to inaccurate veracity predictions.
+TF–IDF (Term Frequency–Inverse Document Frequency) represents one of the earliest and most fundamental sparse retrieval methods. It scores documents based on the importance of query terms within a document and their rarity across the entire document collection ~\cite{Wang2024Jul}.
 
-~\citet{Jung2026Mar} VILLAIN follow similar RAG based approach, using text retriever and visual retriever to retrieve evidence, but they have added a extra step where three specialized VLM based agents generate a detaield analysis reports focused on  a specific evidentiary relationship. A Text-Text agent to analyze the alignment between the claim text and the retrieved textual sources.
-A Image-Text agent to Examines the relationship between the claim images and the textual evidence derived from them and a cross modal agent Investigates the complex interactions between all textual and visual evidence sets to identify global narratives or critical discrepancies. The analysis reports are synthesized by a Lead Fact-Checking Adjudicator agent into 20 diagnostic QA pairs, 5 pairs in 4 iterations. The verdict prediction egent is predicted by filtering the 20 QA pairs to 10 QA pairs and generate a verdict and justification.
-This approach allows for a more detailed analysis of the evidence and the claim, and may lead to more interpretable predictions. However, it is also more complex and may require more computational resources, which can limit its practicality for real-world deployment.
-It is retrieval dependent and there is difficulty in scaling such systems.
+BM25 (Best Matching 25) extends traditional TF–IDF by introducing a non-linear term weighting scheme and document length normalization, resulting in more effective relevance scoring ~\cite{Robertson2009Sep}. As a long-established standard in information retrieval, BM25 is widely valued for its simplicity, effectiveness, and computational efficiency, particularly for short queries and large-scale retrieval tasks.
 
+BM25 is especially effective at matching rare phrases, keywords, and specific entity names. For example, it can accurately retrieve passages containing unique terms such as “Thoros of Myr,” which dense encoders may fail to represent precisely ~\cite{Karpukhin2020Nov}. Due to these strengths, BM25 has been widely adopted in fact-checking systems, including FEVER competition baselines by ~\citet{Cao2025May}, the ADA-AGGR framework proposed by ~\citet{Upravitelev2026Mar}, Xxp by ~\citet{Tsoneva2026Mar} and REVEAl proposed by ~\citet{Tariq2026Mar}. These systems use BM25 as a "first-pass" filter to narrow down large knowledge bases into a manageable set of candidates for more expensive dense retrievers to analyze. Xxp employed BM25 for text related questions within their hybrid retrieval pipeline which helps to identify a broad candidate set of the top 2000 segments from the textual knowledge store before encoding them for dense reranking ~\cite{Tsoneva2026Mar}. The ADA-AGGR framework  also follow a hyrbid approach where the system receives the top 1000 candidates using BM25 for its text-only retrieval component ~\cite{Upravitelev2026Mar}.
 
-\begin{table}[ht]
-\centering
-\caption{Comparison of top-performing multimodal fact-checking systems in the AVeriMaTeC Shared Task.}
-\label{tab:comparison_systems}
-\begin{tabular}{l c c c}
-\hline
-\textbf{Feature} & \textbf{AIC CTU} & \textbf{ADA-AGGR} & \textbf{VILLAIN} \\
-\hline
-Rank & 3rd Place & 2nd Place & 1st Place \\
-MLLM Backbone & GPT-5.1 & Gemini 3 Pro & Gemini-2.5-Pro \\
-Complexity & 1 MLLM call & Sequential (3+ steps) & 8 MLLM calls (Multi-agent) \\
-Key Innovation & Low-cost modular RAG & Image downsampling for speed & URL filling \& Multi-agent analysis \\
-Primary Goal & Accessibility/Cost & Deployment/Efficiency & High-Veracity Performance \\
-\hline
-\end{tabular}
-\end{table}
+~\citet{Won2025Nov} describes the main limitation of BM25 is its dependence on exact keyword matching, which restricts its ability to capture deeper semantic relationships in complex queries. Although computationally efficient, BM25 generally underperforms compared to modern neural sparse retrieval models in large-scale retrieval tasks in metrics like MRR@10 and Semantic Similarity Scores (SSS). SPLADE addresses these limitations through learned sparse lexical representations and query expansion, enabling improved semantic understanding and retrieval performance. However, SPLADE introduces higher computational cost and latency compared to BM25, especially for short queries, and remains constrained by the fixed BERT WordPiece vocabulary . Splade was used as a text-retrieval strategy for claim-text related documents by Team fv.
 
-Retrieved evidences are the backbone of any fact checking system. Robust multimodal retrieval remains a major challenge in multimodal fact-checking, as the quality of retrieved evidence directly impacts the accuracy of verification and in some cases the resukting QA pairs and the final verdict may be more dependent on the quality of the retrieved evidence than the reasoning capabilities of the model, which highlights the importance of improving retrieval techniques for multimodal fact-checking systems.
-In this competition with a already set knowledge store, retrieving evidences to generate QA pairs is fine but in a real world setting, the system may need to counter question the claim iteratively to retrieve evidences from web.
-While these recent state-of-the-art frameworks like VILLAIN and AIC CTU rely on the mxbai embedding family and standard reverse image search, my approach introduces a more nuanced retrieval ensemble. By combining SPLADE for learned sparse expansion, BGE-en for dense textual semantics, and LongCLIP for long-context visual grounding, I address the 'vocabulary mismatch' and 'description bottleneck' limitations inherent in current multimodal RAG pipelines
+\subsection{Dense Retrieval}
 
-\section{Retrieval Systems for Fact-Checking}
+Dense Passage Retrieval (DPR) introduced a shift from traditional sparse retrieval methods such as BM25 and SPLADE toward dense dual-encoder architectures. Instead of relying on exact keyword matching, DPR uses BERT-based encoders to map queries and documents into a shared dense embedding space, enabling retrieval based on semantic similarity. This allows the model to capture latent semantic relationships and lexical variations, such as associating “bad guy” with “villain,” which sparse retrieval methods may fail to identify ~\citep{Karpukhin2020Nov}.
 
+Empirically, DPR significantly outperformed BM25, improving top-20 retrieval accuracy by 9\%–19\% on several benchmarks ~\citep{Karpukhin2020Nov}. Consequently, modern fact-checking and FEVER-style systems commonly combine dense vector retrieval approaches with traditional sparse retrieval techniques such as BM25 ~\citet{Schlichtkrull2024Nov}. Recent multimodal fact-checking frameworks such as AIC CTU ~\cite{Ullrich2026Mar} and VILLAIN~\cite{Jung2026Mar} also employ mxbai-embed-large-v1 as the dense embedding model. AIC CTU chunks the offline knowledge store and embeds each segment using  mxbai-embed-large-v1 and then performs an exact k-Nearest Neighbour (k-NN) search using the FAISS library to find the most similar segments for textual retrieval ~\cite{Ullrich2026Mar}. Similarly, VILLAIN uses the same embedding model mxbai-embed-large-v1 to find the top 100 candidates from the knowledge store ~\cite{Jung2026Mar}.
 
-Sparsness is needed primarily for efficiency in large scale retrieval systems. Sparse retrieval is a technique in information retrieval that finds relevant documents by matching exact words or tokens between a query and documents. It creates high-dimensional, mostly zero-valued vectors for text,
-which allows for highly efficient search via inverted indices. For a retrieval system to be efficient, it must avoid calculating scores for every document in a collection. Instead, it should only consider documents that contain at least one query term. 
+\subsection{Hybrid Retrieval}
 
-Sparse retrieval identifies relevant documents based on statistical word frequency information. It is "sparse" because it typically uses an inverted index where most document-term values are zero; a document is only indexed or "scored" if it explicitly contains a query term.
-Sparse retrieval is required due to the following reasons:
-\begin{itemize}
-    \item \textbf{Efficiency with Large Datasets}: The system must ``quickly obtain'' relevant documents from a collection of millions of open-domain Wikipedia documents. Sparse methods are computationally efficient enough to handle this scale.
-    \item \textbf{Maximizing Recall}: The primary goal of this initial sparse stage is to achieve ``as high as possible recall''. This ensures that the potential evidence is captured in a smaller candidate pool before more complex, computationally intensive models are used for refinement ~\citet{Wang2022Aug}.
-\end{itemize}
-
-In fact-checking tasks, sparse retrieval remains particularly effective because many verification problems depend on exact entity matching, numerical consistency, and precise lexical evidence. Claims involving names, dates, locations, or quoted statements often require retrieval systems to prioritize exact term overlap rather than semantic similarity alone.
-
-
-TF-IDF (Term Frequency–Inverse Document Frequency) can be seen as the most basic form of sparse reteival.
-TF-IDF (Term Frequency-Inverse Document Frequency) is a traditional information retrieval model that scores documents based on the product of two components: a weight derived from the frequency of a term in a document (tf) and a weight based on how many documents in the collection contain that term (idf).
-
-
-\begin{itemize}
-    \item \textbf{Term Frequency (tf)}: This component represents how many times a query term appears in a document. In traditional tf$\times$idf models, the tf component is often linear, meaning the weight increases proportionally with each additional occurrence of the term.
-    \item \textbf{Inverse Document Frequency (idf)}: This component weights terms based on their rarity across the entire collection. The sources define a specific idf weighting formula ($w_{\text{IDF}_i}$) that is used in the absence of relevance information, which serves as a ``close approximation to classical idf''.
-\end{itemize}
-
-BM25 improves upon traditional TF-IDF (Term Frequency-Inverse Document Frequency) by introducing a more nuanced, non-linear approach to term weighting and document length ~\citet{Robertson2009Sep}. 
-BM25 is a long-standing standard in information retrieval primarily valued for its effectiveness and simplicity
-. It operates on a probabilistic framework that ranks documents by analyzing term frequency and inverse document frequency to capture relevance
-. One of its primary advantages is its computational efficiency, as it handles inputs—particularly short queries—with minimal processing overhead and significantly lower latency.
-It is more effective at matching salient, rare phrases or specific names
-. For instance, BM25 can better retrieve a passage containing a unique name like "Thoros of Myr," which a dense encoder might lack the capacity to represent specifically ~\citet{Karpukhin2020Nov}.
-BM25 was used for text retrieval for the claim text in the baselines of the Fever competition ~\citet{Cao2025May} and also by ~\citet{Upravitelev2026Mar}.
-
-The primary limitation of the BM25 model is its reliance on keyword matching, which hinders its ability to handle complex and semantically rich queries. While it has been a long-standing standard in information retrieval due to its simplicity, it often struggles to capture the deeper semantic meaning of documents and queries beyond simple term overlap. Consequently, in large-scale retrieval scenarios involving billions of documents, BM25 consistently demonstrates lower retrieval effectiveness—measured by metrics like MRR@10 and Semantic Similarity Scores (SSS)—compared to modern neural sparse models.
-SPLADE addresses these limitations by utilizing learned sparse lexical representations that allow for superior semantic understanding and enhanced query expansion. By incorporating learned embeddings, SPLADE captures deeper semantic relationships that traditional keyword-based models miss, leading to significant improvements in retrieval performance, particularly for complex inputs.
-However splade models incure significantly higher FLOPS and latency compared to traditional BM25 models struggles with efficicnecy when handling shot inputs.
-also splade is limited by the BERT Wordpiece vocabulary which can constrain their overall lexical representation power and flexibility in document-query interactions.
-SPLADE, while a significant improvement over traditional sparse methods, still relies on term expansion to capture meaning.~\citet{Won2025Nov}.
-
-Dense Passage Retrieval (DPR) represents a shift in retrieval methods from traditional sparse, keyword-based models like BM25 and splade to a dense dual-encoder framework
-. While BM25 and splade relies on high-dimensional sparse vectors, exact token matching and lexical search, DPR utilizes BERT-based encoders to map questions and passages into a low-dimensional continuous space, measuring relevance via dot-product similarity
-.This dense representation allows the system to capture latent semantic relationships and lexical variations (e.g., equating "bad guy" with "villain") that keyword-matching systems often fail to retrieve. Empirically, DPR significantly outperforms BM25 on most benchmarks, improving top-20 retrieval accuracy by 9\% to 19\% absolute ~\citet{Karpukhin2020Nov}.
-~\citet{Ullrich2026Mar} and ~\citet{Jung2026Mar} both have use dense embedding models for text retreival with models mxbai-embed-large-v1 and mxbai-embed respectively.
-
-\section{Hybrid Retrieval}
-
-While they are highly effective at semantic matching, they have specific limitations. Dense vectors are designed for context but lack the specific keyword information required for exact matching. Because they focus on semantic meaning rather than specific lexical tokens, they may struggle in scenarios where a specific name, code, or technical term is critical to the query's relevance.
- show that a deep
-retrieval model poorly generalizes to a new domain with large domain shift, while
-lexical matching and expansion models are robust across domains ~\citet{Chen2022Jan}.
-Classic lexical retrieval models struggle to understand the underlying meanings
-of queries and documents. Neural embedding based retrieval models can soft
-match queries and documents, but they lose specific word-level matching information ~\citet{Gao2020Apr}.
+~\citet{Chen2022Jan} and ~\citet{Gao2020Apr} point out the pros and cons of the two retrieval methods discussed earlier. Dense retrieval models are highly effective at semantic matching, but they often lose precise keyword-level information required for exact matching of names, codes, or technical terms. Additionally, dense retrievers may generalize poorly across domains with significant domain shifts, whereas lexical retrieval methods remain more robust . Conversely, traditional sparse methods struggle to understand the underlying meanings of queries and documents despite excelling at exact lexical matching .
 
 A hybrid strategy, which combines dense vectors with sparse vectors (such as BM25 or SPLADE), is used to exploit the complementary strengths of both methods while mitigating their individual weaknesses.
 
 \begin{itemize}
     \item \textbf{Complementary Strengths}: Sparse methods excel at exact keyword matching and provide interpretable representations, filling the gap left by dense retrievers.
-    \item \textbf{Enhanced Accuracy}: Empirical evidence shows that fusing these two representations significantly improves overall retrieval accuracy compared to using either method alone ~\citet{Gao2020Apr} ~\citet{Chen2022Jan}.
-    \item \textbf{Robustness in Specific Scenarios}: Hybrid strategies demonstrate improved performance and robustness in cross-domain retrieval (where the search engine is used on a different domain than its training data) and long-text retrieval ~\citet{Luan2021}.
+    \item \textbf{Enhanced Accuracy}: Empirical evidence shows that fusing these two representations significantly improves overall retrieval accuracy compared to using either method alone as discussed by ~\citet{Gao2020Apr} and ~\citet{Chen2022Jan}.
+    \item \textbf{Robustness in Specific Scenarios}: Hybrid strategies demonstrate improved performance and robustness in cross-domain retrieval (where the search engine is used on a different domain than its training data) and long-text retrieval ~\cite{Luan2021}.
     \item \textbf{Support for Modern AI}: Hybrid retrieval has become a standard practice in Retrieval Augmented Generation (RAG) for Large Language Models (LLMs) to ensure the most relevant context is provided to the model.
 \end{itemize}
 
-However combining these two methods can be challenging. Dense and sparse vectors have vastly different distributions.
-Dense vectors are typically normalized (ranging 0 to 1), whereas sparse vectors have indeterminate magnitudes and different similarity probability spaces
-This makes it difficult to find an optimal fusion weight (α) to balance the two types of distances accurately.
+\subsection{Fusion Between Text sources}
+Despite their complementary strengths, effectively combining dense and sparse retrieval methods remains challenging due to differences in their score distributions. Dense retrieval scores are typically normalized (0 to 1), whereas sparse retrieval scores can vary widely in magnitude, making it difficult to determine optimal fusion weights between the two methods.
 
-ost prior works [42,17,24,23] model this combination as a linear interpolation of the scores of deep and lexical retrieval models. This fusion method is
-sensitive to the score scales and the weights assigned to the different models [42],
-which needs careful score normalization and weight tuning, especially when multiple models are combined. We expect that the raw scores of the models can vary
-from one domain/dataset to another, and likewise the interpolation weights ~\citet{Wang2021Jul}.
+Most existing hybrid retrieval approaches rely on linear interpolation of dense and sparse retrieval scores. However, this strategy is highly sensitive to score scaling and weight selection, often requiring careful normalization and dataset-specific tuning. Additionally, retrieval score distributions may vary across domains, further complicating robust fusion ~\cite{Wang2021Jul}.
 
-There are approaches where the two retrievals are done separately from their own indexes and then a Reciprocal rank fusion
-is done to generate the final ranking by considering the ranking positions of each candidate generated by different
-models, instead of fusing their scores. RRF demonstrates robust and effective
-ensembles. It can be easily applied to a
-new domain in a zero shot setting (with no in-domain training data), we would
-like to eliminate such domain-specific normalization and tuning ~\citet{Chen2022Jan}.
+~\citet{Chen2022Jan} uses an alternative hybrid retrieval approach where he performs dense and sparse retrieval independently using separate indexes and then combines the results through Reciprocal Rank Fusion (RRF). Instead of merging raw retrieval scores, RRF aggregates documents based on their ranking positions across different retrieval models. This approach has been shown to provide robust and effective retrieval ensembles while avoiding the need for domain-specific score normalization and weight tuning. As a result, RRF generalizes well to new domains in zero-shot settings without requiring in-domain training data.
 
-Rather than using two retreivals from different indices and combining them with RRf ~\citet{Zhang2024Oct} discuss about creating a unified inde to handler hybrid vectors.
-This typically involves concatenating the dense and sparse vectors into a single high-dimensional representation. A single search algorithm, such as Hierarchical Navigable Small World (HNSW) or an Inverted File index (IVF), is then used to retrieve results from this unified space.
-However it has its downsides, as the Dense and sparse vectors have vastly different distributions and since Sparse vectors are high-dimensional, and calculating their distances is significantly more expensive than dense calculations, In a unified graph-based index, sparse distance computation can account for over 60\% of total search time and take approximately 11 times longer than dense distance calculations.
+Instead of performing retrieval separately and combining results with Reciprocal Rank Fusion (RRF), ~\citet{Zhang2024Oct} proposed unified hybrid indexing approaches that store dense and sparse vectors within a single index. This is typically achieved by concatenating dense and sparse representations into a unified high-dimensional vector space, followed by retrieval using algorithms such as HNSW ((Hierarchical Navigable Small World) or IVF(Inverted File Indexing).
+
+However, unified indexing introduces significant computational challenges. Dense and sparse vectors follow very different distributions, and sparse vectors are extremely high-dimensional, making distance computation substantially more expensive than dense similarity calculations. In graph-based unified indexes, sparse distance computations can account for more than 60\% of total search time and may take up to 11 times longer than dense distance calculations ~\citet{Zhang2024Oct}.
+
+REVEAL used Weighted Multi-Query Strategy to execute four different query types in parallel, each assigned a specific importance weight to prioritize certain signals like Debunking Heuristics (w=3.0), Primary Question (w=2.0), Claim Context (w=1.5) and Query augmentation (w=1.0). The results from these four queries are aggregated using a modified Weighted RRF formula. By incorporating the importance weight, the system ensures that a document matching a high-priority "debunking" query bubbles to the top of the list, even if its raw BM25 rank was lower ~\cite{Tariq2026Mar}.
+
+Early research in automated fact-checking primarily focused on textual claims and textual evidence. However, the increasing prevalence of multimodal misinformation has highlighted the need for systems capable of jointly processing both textual and visual information.
 
 \section{Multimodal Retrieval}
 
-CLIP, which stands for Contrastive Language-Image Pre-training, is a computer vision system developed to learn state-of-the-art image representations directly from natural language supervision.
-The system consists of an image encoder and a text encoder that are trained together and the feature respresentations form each encoder are linearly projected into a shared embedding space.Alignment is achieved by maximizing the cosine similarity between the embeddings of the correct image-text pairs while minimizing the similarity for all incorrect pairings in the batch
-. This process "connects" visual representations to language, allowing the model to understand visual concepts through the descriptions used to reference them.
-Because it understands the relationship between text and images, CLIP is highly effective at finding relevant images in a database based on a text query, or finding relevant text given an image.
-The model has learned to recognize digitally rendered text, enabling it to perform tasks like reading signs or identifying content in memes.
-CLIP excels at recognizing verbs and activities (e.g., "hammering a phone" or "drilling an egg"). Because CLIP learns such a broad set of concepts from 400 million internet pairs, it displays exceptional zero-shot retrieval performance ~\citet{Radford2021Feb}.
+Studies in multimodal misinformation further demonstrate that combining text with images can significantly increase the perceived credibility and spread of false claims. This has motivated the development of multimodal fact-checking approaches that incorporate visual evidence alongside textual reasoning ~\cite{Hameleers2020Feb}.
 
-CLIP imposes a hard ceiling of 77 tokens for input text due to its absolute positional embedding. Because CLIP was trained predominantly on brief summary texts, its image encoder tends to focus only on the most crucial elements, disregarding finer details and relationships within an image.
-Long-CLIP improves the model by unlocking long-text capabilities while preserving the original strengths of CLIP.
-To overcome the 77-token limit, Long-CLIP extends the maximum input length to 248 tokens. It retains the first 20 positional embeddings, which were already well-trained in the original model.
-It then interpolates the remaining 57 embeddings using a larger ratio
-. This minimizes disruption to the established representation of short text positions while allowing the model to process much longer sequences.
-Long-CLIP shows a 25\% improvement in long-caption image-text retrieval and a 6\% improvement in traditional short-text retrieval tasks like COCO and Flickr30k
+In multi-modal environments, the intersection of textual claims and visual evidence represents a primary vector for misinformation, where the deception often lies not in the falsehood of a single modality, but in the manipulated contextual connection between them.
 
-~\citet{Samuel2025Jul} have used SigLIP(Sigmoid Loss for Language-Image Pre-training), to bridge the modality gap between natural language text queries and visual video frames.
-At search time, the SigLIP text encoder processes the user's query, which is then matched against the frame embeddings to find the best visual match for each video.
-SigLIP is often preferred over the original CLIP because it replaces standard softmax normalization with a sigmoid loss function, which allows for better scalability and efficiency during training.
-They achieved an 81\% improvement in nDCG@20 over leading multimodal encoders and a 37\% improvement over single-modality systems on the MultiVENT 2.0 dataset.
+Early approaches to multimodal fact-checking, such as the work by ~\citet{Xu2024Mar}, utilized CLIP to jointly encode textual and visual information into a shared feature space. The extracted image and text representations were fused using attention mechanisms and bilinear pooling, after which a classifier was trained to predict the veracity of the claim.
 
-In the MMMORRF system from ~\citet{Samuel2025Jul}, Reciprocal Rank Fusion (RRF)—specifically a novel variant called Weighted Reciprocal Rank Fusion (WRRF)—is used to combine the rankings from separate retrieval sub-pipelines (vision-based and text-based) into a single, unified result.
-WRRF allows the system to capitalize on the complementary strengths of different modalities, such as visual frames (processed by SigLIP), spoken audio (ASR), and embedded text (OCR).
-Unlike traditional RRF, which treats all sources equally, WRRF uses video-dependent importance weights
-. This means the system can adaptively prioritize the modality that is most likely to be reliable for a specific piece of content.
+CLIP (Contrastive Language–Image Pre-training) is a multimodal model that learns shared representations of images and text through contrastive learning ~\cite{Radford2021Feb}. It jointly trains an image encoder and a text encoder, projecting both modalities into a common embedding space by maximizing similarity between matching image–text pairs and minimizing similarity for incorrect pairs.
 
-Similarly in ~\citet{Mourao2014Jun}, Multimodal retrieval is typically implemented as a late fusion task, where information from different modalities (such as text, images, or audio) is indexed and searched separately before being combined into a single, unified result list.
-Each independent search generates its own ranked document list, where items are assigned individual scores and ranks based on that specific modality's relevance.
-Along with Reciprocal Rank (RR) and Reciprocal Rank Fusion (RRF), A more advanced variant, Inverse Square Rank (ISR), uses a quadratic decay (1/rank 
-2) to prioritize top-ranked results and multiplies the final score by the frequency of the document across lists to exploit the "Chorus Effect".
-The chorus effect occurs when multiple different retrieval approaches all retrieve the same item, suggesting a higher probability that the item is relevant to the query.
-Methods such as CombSUM, CombMAX, and CombMNZ were also used by aggregating the actual relevance scores from each engine, however these can be unstable because score distributions vary significantly between different search systems.
+By learning visual concepts directly from natural language supervision, CLIP enables effective cross-modal retrieval, such as retrieving images from text queries or matching text descriptions to images. The model also demonstrates strong zero-shot retrieval capabilities and can recognize activities, digitally rendered text, and semantic relationships across visual and textual modalities ~\cite{Radford2021Feb}. CLIP was used as an visual retrieval strategy for retrieving image related documents by the AVerImaTeC baseline and Team fv ~\cite{Cao2026Mar}.
+
+CLIP is limited to a maximum input length of 77 tokens due to its absolute positional embeddings and was primarily trained on short image captions. As a result, it often focuses only on the most salient visual elements while overlooking finer contextual details.
+
+Long-CLIP addresses this limitation by extending the text input length to 248 tokens while preserving the strengths of the original CLIP model. It retains the well-trained initial positional embeddings and interpolates the remaining embeddings to support longer textual inputs with minimal disruption to existing representations. This extension significantly improves long-caption image–text retrieval performance while also providing gains on standard short-text retrieval benchmarks such as COCO and Flickr30k ~\cite{Zhang2024Mar}.
+
+~\citet{Samuel2025Jul} utilized SigLIP (Sigmoid Loss for Language–Image Pre-training) to bridge the modality gap between textual queries and visual video frames. During retrieval, the SigLIP text encoder processes the user query and matches it against visual frame embeddings to identify relevant video content.
+
+Compared to the original CLIP framework, SigLIP replaces softmax normalization with a sigmoid-based loss function, improving training scalability and efficiency. Using this approach, the authors achieved significant improvements on the MultiVENT 2.0 dataset, including an 81\% increase in nDCG@20 over leading multimodal encoders and a 37\% improvement over single-modality retrieval systems.
+
+REVEAL used SigLIP2-Large to create a visual embedding space, allowing the system to find images based on semantic similarity  rather than just simple visual overlap ~\cite{Tariq2026Mar}. Xxp framework also used SigLIP(siglip-base-patch16-384) for a separate multimodal pipeline. It created a joint embedding of the textual query and the claim image, then computed cosine similarity against token-aware chunks in an image-related knowledge store ~\cite{Tsoneva2026Mar}. ADA-AGGR employed ColPali 1.3, which utilizes a "late-interaction" mechanism to compare textual queries against multimodal image patches ~\cite{Upravitelev2026Mar}
+. It used these embeddings for both "Image Retrieval" (visual-only) and "Multimodal Retrieval" (text + image queries). VILLAIN uses the Ops-MM-embedding-v1-7B multimodal model
+. It queried the image related store using both the claim text and the claim images to retrieve the top-ranked visual evidence ~\cite{Jung2026Mar}.
+
+In the MMMORRF framework proposed by ~\citet{Samuel2025Jul}, retrieval results from separate visual and textual pipelines are combined using a weighted variant of Reciprocal Rank Fusion (WRRF). This approach integrates evidence from multiple modalities, including visual frames processed by SigLIP, speech transcripts obtained through ASR, and embedded text extracted via OCR.
+
+Unlike standard RRF, WRRF assigns adaptive modality-specific weights, allowing the system to prioritize the most reliable information source for a given input. This enables more effective multimodal retrieval by leveraging the complementary strengths of different modalities.
+
+~\citet{Mourao2014Jun} described multimodal retrieval as a late-fusion process, where different modalities are retrieved independently and later combined into a unified ranking. Fusion methods such as Reciprocal Rank Fusion (RRF) and Inverse Square Rank (ISR) prioritize consistently top-ranked results across modalities, leveraging the “chorus effect,” where documents retrieved by multiple systems are considered more likely to be relevant.
 
 \section{Evidence Ranking and Diversification}
 
-Cross-encoders are primarily utilized for reranking because they provide significantly higher accuracy and better generalization than bi-encoders like splade and dense retrievers, particularly in zero-shot or out-of-domain scenarios.
-. While they are computationally more expensive, they are "necessary" in a multi-stage retrieval pipeline to refine the results provided by faster, less precise first-stage retrievers like BM25,splade and dense retreivals.
-Unlike bi-encoders, which represent queries and documents as separate vectors, cross-encoders process the query and document together
-. This allows for "early query-document interactions" within the model's architecture, which is a significant factor in their superior effectiveness.
-Cross-encoders demonstrate a much stronger ability to generalize to new domains that were not seen during fine-tuning
-. While bi-encoders often perform similarly to cross-encoders on in-domain tasks, their performance tends to drop significantly—or "extrapolate substantially worse"—when applied to new domains ~\citet{Rosa2022Dec}.
-~\citet{Rosa2022Dec} uses cross encoders like monoT5 as rerankers in the second stage of the pipeline and is taksed with sorting a candidiate list of 1000 texts that have be retrieved by BM25 and 
-concludes that the reranker's effectiveness remains consistently high regardless of whether the initial 1,000 documents were provided by a sparse retriever (BM25) or a dense retriever (GTR).
-Similarly ~\citet{Ma2023May} uses LLMs like GPT-3 as rerankers  where it takes query and a list of multiple documents simultaneously and generate a reordered list of document identifiers based on their relevance.
+Cross-encoders are commonly used for reranking in multi-stage retrieval pipelines due to their higher accuracy and stronger generalization compared to bi-encoder methods such as BM25, SPLADE, and dense retrievers. Unlike bi-encoders, cross-encoders jointly process the query and document, enabling richer query–document interactions and more precise relevance estimation. Although computationally expensive, they are effective for refining top retrieved candidates, especially in zero-shot and out-of-domain scenarios.
+While bi-encoders often perform similarly to cross-encoders on in-domain tasks, their performance tends to drop significantly—or "extrapolate substantially worse"—when applied to new domains ~\cite{Rosa2022Dec}.
 
-However, while cross-encoders are effective in reranking, a lot of duplicate or same evidences can score high and those homogenous documents could be high in the ranks which will not involve other alternative voices in the evidences.
-MMR - Maximal Marginal Relevance is an innovative method used to enhance the performance of Retrieval-Augmented Generation (RAG) pipelines in automated fact-checking.
-MMR is used for diversity-based reranking when reordering documents
-. This ensures that the system doesn't just retrieve the most similar documents, which might all contain the same information, but instead selects a diverse set of evidence.
-By reordering documents and producing summaries that prioritize non-redundant information, systems can provide a more comprehensive set of facts to the reasoning model.
+~\citet{Rosa2022Dec} employed cross-encoders such as monoT5 as second-stage rerankers to reorder the top 1,000 candidate documents retrieved by BM25. Their study showed that reranking performance remained consistently strong regardless of whether the initial candidates were retrieved using sparse methods like BM25 or dense retrievers such as GTR (Generalizable T5-based dense Retrievers).
 
-According to ~\citet{Carbonell1998Aug}, in scenarios where there is a "vast sea" of potentially relevant documents, many often contain duplicative or overlapping information
-. MMR identifies "marginal relevance," meaning a document only ranks highly if it provides new information that hasn't appeared in previously selected results.
-The method is user-tunable through a parameter (λ) that balances relevance and diversity
-. Users can choose a smaller λ to get a broad, panoramic sampling of a topic or a larger λ to focus on the most reinforcing relevant documents ~\citet{Ullrich2024Nov}.
+Similarly ~\citet{Ma2023May} used LLMs like GPT-3 as rerankers  where it takes query and a list of multiple documents simultaneously and generate a reordered list of document identifiers based on their relevance.
+
+REVEAL used SFR-Embedding-2\_R to re-score the top 500 candidates from the sparse retrieval stage to filter out irrelevant matches and refine to a final set of 15 textual documents ~\cite{Tariq2026Mar}. Xxp used gte-base embedding model to encode the query and the top 2,000 segments after the sparse BM25 pass. It then computed cosine similarity to rank these candidates and selects the top 10 most similar segments ~\cite{Tsoneva2026Mar}. ADA-AGGR re-ranked the 1000 candidates retrieved by BM-25 using a dense model—typically Qwen3-4B-Embedding or Qwen3-E-0.6B, to select the top five pieces of text evidence ~\cite{Upravitelev2026Mar}. VILLAIN applies a secondary dense stage using mxbai-rerank-large-v1 to narrow the top 100 candidates down to the top 10 most relevant segments ~\cite{Jung2026Mar}.
+
+Although cross-encoders are effective rerankers, they often assign high scores to duplicate or highly similar documents, reducing evidence diversity. To address this, Maximal Marginal Relevance (MMR) is used as a diversity-aware reranking strategy that balances relevance with non-redundancy. By promoting diverse evidence instead of repetitive documents, MMR helps provide a broader and more informative evidence set for downstream reasoning in RAG-based fact-checking systems.
+
+~\citet{Carbonell1998Aug} introduced Maximal Marginal Relevance (MMR) to reduce redundancy in retrieval systems where many relevant documents contain overlapping information. MMR ranks documents based on their ability to provide new and non-redundant information compared to previously selected results. The method includes a tunable parameter ($\lambda$) that balances relevance and diversity, allowing systems to prioritize either broader evidence coverage or highly relevant supporting documents ~\cite{Ullrich2024Nov}.
 
 
-Similar to MMR, ~\citet{Do2025Apr} have use a Diverse Length-aware MMR(DL-MMR) which ensures that retrieved exemplars have diverse target lengths
-,
-. This is used because Large Language Models (LLMs) tend to generate summaries that match the length of the examples provided to them; providing diverse lengths prevents the LLM from being "locked" into a specific length.
-A primary reason for using the DL-MMR variant is its extreme efficiency compared to standard MMR
-,
-. Standard MMR requires comparing every pair of exemplars in a pool, which is computationally expensive (n(n−1)/2 comparisons), whereas DL-MMR only needs to store and compare fixed length values (n comparisons).
-Using MMR variants like DL-MMR can reduce memory usage by over 781,000 times and computational costs by over 500,000 times while maintaining the same level of informativeness in the final generated summary.
+~\citet{Do2025Apr} proposed Diverse Length-aware MMR (DL-MMR), a lightweight variant of MMR that promotes diversity in the lengths of retrieved exemplars. This helps prevent Large Language Models from generating outputs biased toward a single response length. Compared to standard MMR, which requires pairwise document comparisons, DL-MMR only compares fixed length values, making it significantly more efficient. The approach reduces memory usage by over 781,000$\times$ and computational cost by more than 500,000$\times$ while maintaining similar informativeness in generated outputs.
+
+AIC-CTU uses Maximal Marginal Relevance (MMR) as a key component of its textual evidence retrieval process. MMR was applied to rerank the 20 candidates from the reranker down to a final set of 7 results. It set the tradeoff between the diversity of the result and the similarity to the claim at $\lambda$= 0.8, which favors the similarity while still incorporating the diversification benefits of MMR  ~\cite{Ullrich2026Mar} .
 
 
 \section{LLM and MLLM for Fact-Checking}
 
-Other important part of a fact checking system is the reasoning module, which is responsible for analyzing the retrieved evidence and making a final prediction about the veracity of the claim. 
+Another key component of a fact-checking system is the reasoning module, which analyzes retrieved evidence to determine the veracity of a claim. Large Language Models (LLMs) and Multimodal Large Language Models (MLLMs) are increasingly used for this task due to their ability to reason over complex textual and visual information. Beyond factual knowledge, these models can also evaluate plausibility, narrative structure, and linguistic style, enabling effective performance even on recent or opinion-based claims.
+Despite these uses, LLMs are not infallible; they often struggle more with factual-sounding claims than opinions and show significant performance variability across different languages and topics ~\cite{Tang2024Nov}.
 
+LLMs are used to decompose claims into questions, draw out context and meaning from the evidences and reason over the retrieved evidences to make a final prediction about the veracity of the claim. ~\citet{Schlichtkrull2023May}, ~\citet{Schlichtkrull2024Nov},~\citet{Ullrich2024Nov}, ~\citet{Ullrich2025Aug} have all relied on LLMs for reasoning and analysis of claims and their related evidences.
 
-Large Language Models (LLMs) and Multimodal Large Language Models (MLLMs) have become increasingly popular for this task due to their ability to understand and reason over complex information.
-LLMs can evaluate claims based on plausibility, language formality, and narrative structure
-. This allows them to perform surprisingly well even on claims about events that occurred after their training data cut-off.
-Research shows LLMs are particularly effective at identifying and classifying claims expressed as opinions, as they can rely on tone and style rather than just external world knowledge.
-Despite these uses, LLMs are not infallible; they often struggle more with factual-sounding claims than opinions and show significant performance variability across different languages and topics ~\citet{Tang2024Nov}.
-
-LLMs are used to decompose claims into questions, draw out context and meaning from the evidences and reason over the retrieved evidences to make a final prediction about the veracity of the claim. 
-~\citet{Schlichtkrull2023May}, ~\citet{Schlichtkrull2024Nov},~\citet{Ullrich2024Nov}, ~\citet{Ullrich2025Aug} have all relied on LLMs to generate question-answer pairs based on the retrieved evidence, and then use these question-answer pairs to make a final prediction about the veracity of the claim.
-
-After the introduction of the multimodal AVERIMATEC dataset, ~\citet{Cao2025May} , most the competitive system have employed MLLMs to explore the multimodal nature of the claims and reasoning over the retrieved multimodal evidences.
+After the introduction of the multimodal AVerImaTeC  dataset  ~\cite{Cao2025May} , most of the competitive system have employed MLLMs to explore the multimodal nature of the claims and reasoning over the retrieved multimodal evidences ~\cite{Cao2026Mar}.
+VILLAIN used Gemini-2.5-Pro for all vision-language model (VLM) agents and showed it outperformed all other models evaluated (including Gemini-2.5-Flash and the entire Qwen3-VL series) across nearly all metrics in its ablation studies ~\cite{Jung2026Mar}. ADA-AGGR used Gemini 3 Pro and found that Gemini 3 Pro enabled the highest veracity accuracy (0.447) compared to Qwen3-VL-8B variants and Gemini 2.5 Flash ~\cite{Upravitelev2026Mar}. XxP, utilized the open-weight Qwen3-VL-8B-Instruct model across all stages of its selective multimodal pipeline ~\cite{Tsoneva2026Mar}. AIC CTU employed GPT-5.1 as the backbone of their generation module ~\cite{Ullrich2026Mar}.The REVEAL framework utilized Qwen2.5-VL (specifically the Qwen2.5-VL-7B-Instruct variant) and Team fv utilized Qwen3-VL-32B as its central backbone for multimodal reasoning and evidence processing ~\cite{Tariq2026Mar}. The baseline tested several combinations of Large Language Models (LLMs) like Qwen2.5-7B-Instruct and Multimodal Large Language Models (MLLMs) like 
+Gemini-2.0-Flash-001, Qwen2.5-VL-7B-Instruct, Gemma-3-12B and LLaVA-Next-7B ~\cite{Cao2025May}.
 
 \section{QA generation in fact checking}
 
 Question-Answer (QA) pairs are useful for fact-checking because they break down complex claims into manageable parts, facilitating the retrieval of evidence and improving the efficiency and clarity of the verification process.
 
-~\citet{Setty2024Jul} have shown that question decomposition from claim for fact checking can be effectively automated and demonstrate that smaller generative
-models, fine-tuned for the question generation task using data augmentation from various datasets, outperform large language models
-by up to 8\%. They also show the evidence retrieved
-using machine-generated questions proves to be significantly more
-effective for fact-checking than that obtained from human-written
-questions.
+~\citet{Setty2024Jul} demonstrated that automated question decomposition for fact-checking can be effectively performed using smaller fine-tuned generative models. Their approach outperformed large language models by up to 8\% on question generation tasks. They also showed that evidence retrieved using machine-generated questions was significantly more effective for fact-checking than evidence retrieved using human-written questions.
 
-In automated systems like Varifocal ~\citet{Ousidhoum2022Dec}, this is done by first extracting "focal points"—coherent phrases from the claim and its metadata (source and date)—using a dependency parser
-. A model then generates unique questions for each focal point to scrutinize the information, followed by a re-ranking process that removes duplicates and selects the most relevant and informative questions for investigation.
+In automated systems such as Varifocal by ~\citet{Ousidhoum2022Dec}, question generation is performed by first extracting “focal points” from the claim and its metadata using dependency parsing. The system then generates targeted questions for each focal point, followed by a reranking stage that removes duplicates and selects the most informative questions for evidence retrieval and verification.
 
-The baseline paper for Averimatec ~\citet{Cao2025May} explores three question-generation strategies for fact checking: Parallel Question Generation (PQG), which generates all questions at once; Dynamic Question Generation (DQG), where each question depends on prior evidence and earlier questions; and Hybrid Question Generation (HQA), which combines both by generating initial questions in parallel and later ones dynamically.
+The AVerImaTeC  baseline study by ~\citet{Cao2025May} explored three question-generation strategies for fact-checking: Parallel Question Generation (PQG), which generates all questions simultaneously; Dynamic Question Generation (DQG), where each question depends on previously retrieved evidence and earlier questions; and Hybrid Question Generation (HQA), which combines both approaches by generating initial questions in parallel and subsequent questions dynamically.
 
-~\citet{Jung2026Mar}, ~\citet{Ullrich2025Aug} and ~\citet{Schlichtkrull2023May} have employed in-context learning with retreived several few-shot QA-pair generation examples from the
-training data using BM25, and these examples are
-incorporated into the QA generation prompt.
+
+Xxp prompts the MLLM to generate 3 to 5 verification questions which are either labeled text-related or image-related. These questions trigger modality-aware retrieval strategies to retrieve the evidences and answer the questions ~\cite{Tsoneva2026Mar}. Similar question generation strategy was used by Team fv as well.
+
+The REVEAL framework uses an iterative, history-aware question generation strategy, where each question is generated based on previously retrieved evidence. Questions are classified as either text-related or image-related to guide retrieval, and the process continues until sufficient evidence is gathered to reach a verdict. While effective, the sequential nature of this approach increases computational cost ~\cite{Tariq2026Mar}.
+
+The ADA-AGGR framework  generates one concise essential verification question for each claim by analyzing both the claim text and all associated claim images simultaneously. The generated question and claim image are combined to retrieve relevant textual and visual evidence from the web.
+Retrieved images are analyzed by a VLM together with the claim and question to generate concise evidence-based answers, while irrelevant images are filtered out through a relevance check. The top textual and visual evidence is then aggregated, and the VLM predicts the final verdict along with a justification referencing the retrieved evidence. The framework also reduces computational cost through aggressive image downsampling while maintaining comparable performance ~\cite{Upravitelev2026Mar}.
+
+However, the reliance on a single generated question may limit the system’s ability to capture complex reasoning and reduce overall robustness and interpretability.
+
+AIC-CTU combines text retrieval and image retrieval using RIS, after which the retrieved evidence is directly provided to GPT-5.1. Using few-shot prompting, the MLLM generates 10 question–answer pairs based on the retrieved evidence and then predicts the veracity of the claim using a single multimodal call to the MLLM~\cite{Ullrich2026Mar}.
+
+This approach improves efficiency by avoiding a separate question generation stage. However, since question–answer generation and reasoning are performed in a single step, it may reduce interpretability and limit detailed evidence analysis. The framework also depends heavily on the quality of retrieved evidence where irrelevant or incomplete retrieval can negatively affect subsequent reasoning and prediction.
+
+ VILLAIN framework combines textual and visual evidence retrieval with multi-agent reasoning. The system employs three specialized VLM-based agents: a Text–Text agent that analyzes consistency between the claim and retrieved textual evidence, an Image–Text agent that examines relationships between claim images and textual evidence, and a Cross-Modal agent that identifies inconsistencies and broader narratives across all modalities ~\cite{Jung2026Mar}.
+
+The reports generated by these agents are aggregated by a Lead Fact-Checking Adjudicator, which produces multiple diagnostic question–answer pairs over several iterations. A final prediction module then selects the most relevant QA pairs to generate the final verdict and justification ~\cite{Jung2026Mar}.
+
+This multi-agent design enables more detailed evidence analysis and improves interpretability. However, the framework is computationally expensive, highly dependent on retrieval quality, and difficult to scale efficiently for real-world applications ~\cite{Jung2026Mar}.
+
+Several recent fact-checking systems use in-context learning (ICL) by retrieving similar training examples with BM25 and providing them as few-shot demonstrations. Approaches such as VILLAIN, AIC CTU, and the  AVerImacTeC baselines employ this strategy to improve question generation and evidence reasoning ~\cite{Jung2026Mar} ~\cite{Ullrich2026Mar} ~\cite{Cao2025May}.
+
+
+Retrieved evidence forms the foundation of modern fact-checking systems, making robust multimodal retrieval a critical challenge in multimodal verification. The quality of retrieved evidence directly influences downstream reasoning, question–answer generation, and final verdict prediction, often impacting system performance more than the reasoning model itself. This highlights the importance of effective retrieval strategies in multimodal fact-checking pipelines.
+
+% Table: Unique Technical Approaches of Competition Systems
+\begin{table}[ht]
+\centering
+\caption{Unique Technical Approaches of AVERIMATEC Competition Systems}
+\label{tab:competition-systems-unique-approaches}
+\begin{tabular}{|l|p{10cm}|}
+\hline
+\textbf{Framework} & \textbf{Unique Technical Approach} \\
+\hline
+VILLAIN & Proactive knowledge enrichment: uses browser automation (Playwright) to crawl and supplement missing or restricted content in the knowledge store before retrieval. \\
+ADA-AGGR & Efficiency and filtering: aggressively downsamples images (8x) to reduce runtime, and filters retrieved images using an Image Answer Generation step for relevance. \\
+AIC CTU & MMR diversification: applies Maximal Marginal Relevance (MMR, $\lambda=0.8$) for diverse, non-redundant retrieval; most cost-effective system (\$0.013/claim). \\
+REVEAL & Semantic gap bridging: applies HyDE (Hypothetical Document Embeddings) to generate ideal evidence targets and uses domain boosting (1.5x weight) for trusted sources (e.g., Snopes, Reuters). \\
+XxP & Selective multimodality: uses images for query formulation but relies on text-only evidence for final verdict and justification. \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Comparison of AVerImaTeC Competition Systems}
+\label{tab:competition-systems-comparison}
+
+\resizebox{1.14\textwidth}{!}{
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+\textbf{Framework} & \textbf{Text Embedding} & \textbf{Multimodal/Image} & \textbf{Reranker} & \textbf{MLLM} \\
+\hline
+VILLAIN & mxbai-embed-large-v1 & Ops-MM-embedding-v1-7B & mxbai-rerank-large-v1 & Gemini-2.5-Pro \\
+ADA-AGGR & BM25 & ColPali 1.3 & Qwen3-4B-Embedding & Gemini 3 Pro \\
+AIC CTU & mxbai-embed-large-v1 & Google Lens & None & GPT-5.1 \\
+REVEAL & BM25 & SigLIP2-Large & SFR-Embedding-2\_R & Qwen2.5-VL-7B-Instruct \\
+XxP & BM25 & SigLIP & gte-base & Qwen3-VL-8B-Instruct \\
+fv & Splade & CLIP & None & Qwen3-VL-32B \\
+Baseline & BM25 & CLIP & None & Gemini-2.0-Flash-001 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+
+
 
 \section{Evaluation of Fact-Checking Systems}
 
-Strong evaluation techniques are required to ensure that fact-checking systems are not only accurate but also robust and generalizable across different domains and claim types.
-Early evaluation methods in FEVER Workshop 2021 ~\citet{Aly2021Nov}, focused on  a single score.For any given claim, a system receives a score of 1 only if both of the following conditions are met- The predicted verdict label is correct and
-The predicted evidence contains at least one complete gold evidence set (meaning the predicted evidence is a superset of at least one required evidence set provided by human annotators). exact matching is done.
+Robust evaluation methods are essential to ensure that fact-checking systems remain accurate and generalizable across different domains and claim types. Early evaluation approaches, such as those used in the FEVER Workshop 2021 ~\cite{Aly2021Nov}, relied on a single metric where a system received a score only if it correctly predicted both the claim verdict and at least one complete gold evidence set through exact evidence matching.
 
-Later both ~\citet{Schlichtkrull2023May} and ~\citet{Schlichtkrull2024Nov} used a scoring function called Hungarian METEOR to measure how well a system's generated questions and answers match reference sets, as the the same evidence can be found in many different sources or phrased in various ways. which relies on
-approimate matching rather than absolute matching. To ensure veracity predictions are grounded in actual facts, a system only receives credit if its evidence meets a quality threshold of 0.25 on the Hungarian METEOR scale.
+Later, ~\citet{Schlichtkrull2023May} and ~\citet{Schlichtkrull2024Nov} adopted Hungarian METEOR as an evaluation metric to measure similarity between generated and reference question–answer evidence pairs. Unlike exact matching, this approach supports approximate matching, accounting for evidence that may originate from different sources or be phrased differently. To ensure that verdict predictions are grounded in reliable evidence, systems only receive credit when the evidence quality exceeds a Hungarian METEOR threshold of 0.25.
 
-Recently in FEVER 9  ~\citet{Cao2025May} competition, with the introuduction of multimodal eveidences, These are compared against human-annotated "gold" references using LLM-based scoring (Gemini-2.0-Flash) in a two-stage process that checks both textual and visual similarity. The quality of the generated justifications is measured by comparing them to human ground truth using ROUGE-1 and Ev2R, a metric shown to align well with human assessment for open-ended generation tasks.
-
+More recently, the FEVER 9 competition (AVerImatTeC) ~\cite{Cao2025May} introduced evaluation methods for multimodal evidence. Generated evidence is compared against human-annotated references using LLM-based scoring with Gemini-2.0-Flash through a two-stage process that evaluates both textual and visual similarity. Additionally, generated justifications are assessed using ROUGE-1 and Ev2R, a metric designed to better align with human evaluation in open-ended generation tasks.
 
 
 
