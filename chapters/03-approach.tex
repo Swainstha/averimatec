@@ -35,6 +35,8 @@ There are some important keywords that will be used throughout this section whic
 
 Given a claim text and a claim image, the pipeline generates a series of questions which help to fact check the claim, Based on the question, the pipeline retrieves evidences related to the claim text and claim image from a knowledge store and generates an answer for the question. This question answer generation goes on for several iterations, and based on these question-answer pairs, a verdict is generated. Based on the verdict generated and on the question-answer pairs a textual justification is generated which explains how the QA pairs led to the generated verdict.
 
+This thesis adopts work of Team fv (Factiverse) as its baseline architecture. The original system uses iterative question generation with modality-aware retrieval, where text-related questions are answered through SPLADE-based retrieval and image-related questions through CLIP-based retrieval. Retrieved evidence is aggregated and supplied to the verification and justification modules. Building upon this architecture, this work investigates alternative retrieval strategies, evidence fusion mechanisms and question-answer generation strategies to improve multimodal fact verification performance.
+
 \section{Information Retrieval Strategies}
 
     There are several key challenges that needs to addressed in this context which are as follows
@@ -43,15 +45,14 @@ Given a claim text and a claim image, the pipeline generates a series of questio
     \item \textbf{Long and noisy evidence sources} - Real-world evidence varies from short snippets to lengthy documents, making efficient retrieval difficult.
     \item \textbf{Entity ambiguity and identity mismatch} - The same image may be associated with multiple conflicting narratives, making it difficult to verify which one is correct and require careful disambiguation across sources.
     \item \textbf{Image reuse and miscontextualization} - Images can be often reused across unrelated claims, leading to false associations that cannot be detected with text alone.
-    \item \textbf{Heterogenous information signals} - Relevant evidence may be distributed across textual content, images, OCR text, and metadata, requiring unified multimodal retrieval strategies.
+    \item \textbf{Heterogenous information signals} - Relevant evidence may be distributed across textual content, images, and metadata, requiring unified multimodal retrieval strategies.
 \end{itemize}
 
-To address these challenges, this thesis work proposes a hybrid multimodal retrieval strategy that combines:
+To address these challenges, this thesis work proposes a hybrid multimodal dual-branch retrieval strategy that combines:
 \begin{itemize}
     \item Dense semantic retrieval
     \item Sparse lexical retrieval
     \item Image-to-text alignment
-    \item Multimodal evidence fusion
 \end{itemize}
 
 \noindent
@@ -62,13 +63,8 @@ To address this challenge, we propose a hybrid multimodal retrieval strategy tha
 
 \subsection{Dense Semantic + Sparse Lexical Retrieval using BGE}
 
-Dense retrieval encodes text into continuous vector representations, enabling semantic matching beyond exact keywords. This work uses the \textit{BAAI/bge-large-en-v1.5} model as the primary dense retriever, allowing retrieval of semantically related evidence even when wording differs significantly. For example, a claim about “a 101-year-old woman giving birth” can retrieve evidence discussing “extreme-age pregnancy hoaxes” despite lexical differences.
+Dense retrieval encodes text into continuous vector representations, enabling semantic matching beyond exact keywords. This work uses the BAAI/bge-large-en-v1.5 model as the primary dense retriever, allowing retrieval of semantically related evidence even when wording differs significantly. For example, a claim about “a 101-year-old woman giving birth” can retrieve evidence discussing “extreme-age pregnancy hoaxes” despite lexical differences.
 
-Queries for BGE are constructed using:
-\begin{itemize}
-    \item The original claim text
-    \item Generated verification questions if available
-\end{itemize}
 
 \subsection{Sparse Lexical Retrieval using Splade}
 To complement dense retrieval, the system employs SPLADE, a sparse neural retrieval model that combines lexical matching with learned term expansion. SPLADE bridges traditional sparse methods such as BM25 with modern dense retrieval, providing effective and computationally efficient sparse representations ~\cite{Formal2021Sep}.
@@ -84,20 +80,28 @@ Dense retrieval alone may fail to prioritize evidence containing critical factua
 
 SPLADE addresses this by emphasizing important lexical features while still benefiting from neural expansion.
 
-SPLADE queries are constructed from:
-\begin{itemize}
-    \item claim text
-    \item Paraphrases of the claim text if available
-    \item generated verification questions if available
-\end{itemize}
+SPLADE represents a query or document as a sparse vector over the BERT WordPiece vocabulary $\mathcal{V}$, where $|\mathcal{V}|=30522$.  
+Given an input sequence $x=(x_1,\ldots,x_n)$ with contextual token embeddings $(h_1,\ldots,h_n)$, the token-level importance of vocabulary term $j$ at position $i$ is computed as
+\begin{equation}
+w_{ij}=\operatorname{transform}(h_i)^\top e_j + b_j,
+\quad i\in\{1,\ldots,n\},\ j\in\mathcal{V},
+\end{equation}
+where $e_j$ is the input embedding of term $j$, $b_j$ is a token bias, and $\operatorname{transform}(\cdot)$ is a linear projection followed by GeLU and LayerNorm (equivalent to MLM logits).  
+The final SPLADE representation applies ReLU and log-saturation, then aggregates across sequence positions:
+\begin{equation}
+s_j(x)=\sum_{i=1}^{n}\log\!\big(1+\operatorname{ReLU}(w_{ij})\big),\quad j\in\mathcal{V}.
+\end{equation}
+For retrieval, relevance between query $q$ and document $d$ is computed by sparse dot product:
+\begin{equation}
+\operatorname{score}(q,d)=\langle s(q),s(d)\rangle.
+\end{equation}
+
 
 \subsection{Image-to-Text Retrieval using LongCLIP}
 
 Textual retrieval alone is insufficient for multimodal misinformation because images are frequently reused in unrelated or misleading contexts. To address this issue, this work incorporates LongCLIP for image-based retrieval.
 
-Standard CLIP is limited to 77 tokens, with an effective context length of about 20 tokens, making it less effective for long contextual evidence and fine-grained attribute interactions. LongCLIP extends CLIP-based image–text alignment to support longer textual contexts, improving retrieval for descriptive evidence, image-associated narratives, and multimodal misinformation through an extended text encoder and dual-alignment fine-tuning.
-
-By using Knowledge-Preserved stretching and primary component matching, LongCLIP improves recall by approximately 25\% on long-text retrieval tasks and 6\% on traditional short-text retrieval, all while maintaining original zero-shot classification performance~\cite{Zhang2024Mar}.
+LongCLIP extends the CLIP framework by supporting longer textual contexts, enabling more effective alignment between claim images and descriptive evidence passages. This capability is particularly valuable for multimodal fact-checking, where relevant evidence frequently consists of detailed narratives rather than short captions. By leveraging a shared image–text embedding space, LongCLIP facilitates the retrieval of visually grounded evidence that complements textual retrieval and supports more reliable claim verification.~\cite{Zhang2024Mar}.
 
 
 \section{Indexing the Knowledge Store}
@@ -294,7 +298,7 @@ LongCLIP queries encode the claim image directly through the vision encoder for 
 \label{fig:rag}
 \end{figure}
 
-In this thesis, we refer to our Hybrid Multimodal Dual-Branch Retriever as Dual-RAG. Dual-RAG separates evidence retrieval into text-based and image-based branches. The objective of this separation is to preserve strong lexical and semantic signals from claim text while also capturing cross-modal visual evidence from claim images.
+In this thesis, we refer to our \textit{Hybrid Multimodal Dual-Branch Retriever} as \textit{Dual-RAG}. Dual-RAG separates evidence retrieval into text-based and image-based branches. The objective of this separation is to preserve strong lexical and semantic signals from claim text while also capturing cross-modal visual evidence from claim images.
 
 \subsubsection{Text-Based Retrieval Branch}
 
@@ -447,7 +451,7 @@ The system is instructed to generate a mix of both types — typically two text-
 \subsubsection{In-Context Learning for Question Generation}
 \label{subsection:icl}
 
-To guide the QA generation model toward producing high-quality verification questions, the system selects the top-5 most similar training claims as in-context learning (ICL) demonstrations. The selection uses dense semantic similarity via the \textit{all-MiniLM-L6-v2} sentence transformer:
+To guide the QA generation model toward producing high-quality verification questions, the system selects the top-5 most similar training claims as in-context learning (ICL) demonstrations. The selection uses dense semantic similarity via the all-MiniLM-L6-v2 sentence transformer:
 
 \begin{equation}
     \text{sim}(c, c_j) = \frac{\mathbf{e}_c \cdot \mathbf{e}_{c_j}}{\|\mathbf{e}_c\| \cdot \|\mathbf{e}_{c_j}\|}
