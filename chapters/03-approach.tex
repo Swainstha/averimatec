@@ -37,6 +37,15 @@ Given a claim text and a claim image, the pipeline generates a series of questio
 
 This thesis adopts work of Team fv (Factiverse) as its baseline architecture. The original system uses iterative question generation with modality-aware retrieval, where text-related questions are answered through SPLADE-based retrieval and image-related questions through CLIP-based retrieval. Retrieved evidence is aggregated and supplied to the verification and justification modules. Building upon this architecture, this work investigates alternative retrieval strategies, evidence fusion mechanisms and question-answer generation strategies to improve multimodal fact verification performance.
 
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{images/example1.pdf}
+\caption{Overview of the different stages of the pipeline with an example}
+\label{fig:example1}
+\end{figure}
+
+\vspace{2cm}
+
 \section{Information Retrieval Strategies}
 
     There are several key challenges that needs to addressed in this context which are as follows
@@ -61,13 +70,13 @@ Evidence retrieval is a fundamental component of multimodal fact-checking. Given
 To address this challenge, we propose a hybrid multimodal retrieval strategy that combines dense semantic retrieval, sparse lexical retrieval, and image–text alignment. This approach enables effective retrieval across heterogeneous information sources, improving both evidence coverage and retrieval accuracy for multimodal fact-checking.
 
 
-\subsection{Dense Semantic + Sparse Lexical Retrieval using BGE}
+\subsection{Dense Semantic Retrieval using BGE(BAAI General Embedding)}
 
-Dense retrieval encodes text into continuous vector representations, enabling semantic matching beyond exact keywords. This work uses the BAAI/bge-large-en-v1.5 model as the primary dense retriever, allowing retrieval of semantically related evidence even when wording differs significantly. For example, a claim about “a 101-year-old woman giving birth” can retrieve evidence discussing “extreme-age pregnancy hoaxes” despite lexical differences.
+Dense retrieval encodes text into continuous vector representations, enabling semantic matching beyond exact keywords. This work uses BAAI/bge-large-en-v1.5 model which is a high performance open source embedding model that converts textual queries and documents into high-dimensional vector representations within a shared semantic space and works in english language. It is used as the primary dense retriever, allowing retrieval of semantically related evidence even when wording differs significantly. For example, a claim about “a 101-year-old woman giving birth” can retrieve evidence discussing “extreme-age pregnancy hoaxes” despite lexical differences. This stage retrieves the top 50 documents and provides it to Reciprocal Rank Fusion.
 
 
 \subsection{Sparse Lexical Retrieval using Splade}
-To complement dense retrieval, the system employs SPLADE, a sparse neural retrieval model that combines lexical matching with learned term expansion. SPLADE bridges traditional sparse methods such as BM25 with modern dense retrieval, providing effective and computationally efficient sparse representations ~\cite{Formal2021Sep}.
+To complement dense retrieval, the system employs SPLADE which stands for stands for  Sparse Lexical and Expansion Model, a sparse neural retrieval model that combines lexical matching with learned term expansion. It is an advanced neural information retrieval and search model used to convert text into sparse vector representations. SPLADE bridges traditional sparse methods such as BM25 with modern dense retrieval, providing effective and computationally efficient sparse representations ~\cite{Formal2021Sep}.
 
 Fact-checking tasks frequently depend on:
 \begin{itemize}
@@ -96,12 +105,13 @@ For retrieval, relevance between query $q$ and document $d$ is computed by spars
 \operatorname{score}(q,d)=\langle s(q),s(d)\rangle.
 \end{equation}
 
+Splade retrieves the top 50 documents and provides it to Reciprocal Rank Fusion stage.
 
 \subsection{Image-to-Text Retrieval using LongCLIP}
 
 Textual retrieval alone is insufficient for multimodal misinformation because images are frequently reused in unrelated or misleading contexts. To address this issue, this work incorporates LongCLIP for image-based retrieval.
 
-LongCLIP extends the CLIP framework by supporting longer textual contexts, enabling more effective alignment between claim images and descriptive evidence passages. This capability is particularly valuable for multimodal fact-checking, where relevant evidence frequently consists of detailed narratives rather than short captions. By leveraging a shared image–text embedding space, LongCLIP facilitates the retrieval of visually grounded evidence that complements textual retrieval and supports more reliable claim verification.~\cite{Zhang2024Mar}.
+LongCLIP extends the CLIP framework by supporting longer textual contexts, enabling more effective alignment between claim images and descriptive evidence passages. This capability is particularly valuable for multimodal fact-checking, where relevant evidence frequently consists of detailed narratives rather than short captions. By leveraging a shared image–text embedding space, LongCLIP facilitates the retrieval of visually grounded evidence that complements textual retrieval and supports more reliable claim verification.~\cite{Zhang2024Mar}. LongCLIP retrieves the top 50 documents based on the claim image, captions and questions and provides them to the next stage.
 
 
 \section{Indexing the Knowledge Store}
@@ -322,15 +332,6 @@ By isolating this branch from the text-only branch, the system avoids over-domin
 
 \subsection{Reciprocal Rank Fusion (RRF)}
 
-Different retrieval methods capture complementary relevance signals:
-\begin{itemize}
-    \item BGE captures semantic similarity,
-    \item SPLADE captures lexical relevance,
-    \item LongCLIP captures visual-semantic alignment.
-\end{itemize}
-
-Within each retrieval branch, the ranked outputs are combined using Reciprocal Rank Fusion (RRF).
-
 Different retrieval methods produce scores on incompatible scales, causing some modalities to dominate during fusion. Reciprocal Rank Fusion (RRF) avoids this issue by combining results based on rank positions rather than raw scores, providing more balanced and robust multimodal retrieval across heterogeneous data sources ~\cite{RyanBogan2025Nov}.
 
 RRF assigns a score to every document based on its rank in each retrieval list using the formula:
@@ -340,11 +341,18 @@ RRF assigns a score to every document based on its rank in each retrieval list u
 \end{equation}
 where $k$ is a constant (commonly set to 60) that controls the influence of lower-ranked documents, $R$ is the set of retrieval lists, and $\text{rank}_r(d)$ is the rank of document $d$ in retrieval list $r$.
 
-This allows documents from different sources or search queries to be compared on a consistent scale.
+This allows documents from different sources or search queries to be compared on a consistent scale. In the text-based branch, RRF fuses BGE and SPLADE ranked outputs. In the image-based branch, RRF is not used, as it has a single retreival source as LongCLIP. RRF passes the top 50 documents to the deduplication stage.
 
-RRF accumulates the scores for documents that appear in more than one list. This ensures that documents found to be relevant across multiple "angles" of a query receive the highest priority in the final ranking ~\cite{Rackauckas2024Jan}. In the text-based branch, RRF fuses BGE and SPLADE ranked outputs. In the image-based branch, RRF fuses the ranked text evidence streams returned by LongCLIP retrieval sources.
+\subsection{Deduplication}
 
-By fusing documents retrieved from various perspectives, RRF enables the system to provide answers that are more comprehensive and contextualized than traditional retrieval methods ~\cite{Rackauckas2024Jan}.
+Deduplication reduces redundancy in retrieved evidence, ensuring diverse and non-repetitive content for downstream reasoning. Duplicates based on url not removed as, the different chunks providing different information could be retrieved for the same url. However near-duplicates are filtered using Jaccard similarity over token sets, discarding candidates with similarity above a threshold ($\tau$=0.85). This strategy preserves semantically distinct evidence while eliminating repetitive passages, improving evidence diversity and coverage.
+
+The Jaccard similarity between two sets $A$ and $B$ is defined as:
+\[
+J(A, B) = \frac{|A \cap B|}{|A \cup B|}
+\]
+
+where $|A \cap B|$ is the size of the intersection of the two sets, and $|A \cup B|$ is the size of their union. This metric is used to measure the similarity between two sets of tokens, ensuring that near-duplicate content is filtered out.
 
 \subsection{Cross-Encoder Reranking}
 
@@ -377,11 +385,11 @@ This enables fine-grained interaction between:
     \item and factual statements.
 \end{itemize}
 
-The reranker significantly improves precision by filtering semantically related but factually irrelevant evidence.
+The reranker significantly improves precision by filtering semantically related but factually irrelevant evidence and passes the top 20 documents to the next stage.
 
 While cross-encoders are slower than the initial retrievers, the sources emphasize that they remain far more efficient than Large Language Models (LLMs) like GPT-4. In many scenarios, a traditional cross-encoder remains highly competitive with LLMs in terms of ranking quality while requiring significantly less time and computational cost ~\cite{Dejean2024Mar}.
 
-In our implementation, cross-encoders are used only for textual evidence reranking after RRF for the text branch. They are not applied to image branch because the BGE-reranker is a text-only reranker. This keeps visual evidence handling in the image branch while still improving precision for the final text evidence list.
+In our implementation, cross-encoders are used only for textual evidence reranking after RRF for the text branch. Text retrieved from images is not handled by the cross-encoder because our cross-encoder is a text-only reranker. However, the retrieved evidence is still based on the claim image, as the image branch retrieves visually grounded textual evidence aligned with the claim's visual content.
 
 \subsection{Maximum Marginal Relevance (MMR)}
 
@@ -416,7 +424,7 @@ The Lambda ($\lambda$) Parameter: This is a user-tunable value between 0 and 1 t
     \item High $\lambda$ (e.g., 0.7): Acts like a ``narrow beam,'' focusing the results on multiple, potentially overlapping documents that reinforce the most relevant information.
 \end{itemize}
 
-We have used $\lambda=0.5$ in our experiments to ensure a good balance between relevance and diversity, allowing the system to provide a comprehensive set of evidence while minimizing redundancy. This setting allows users to explore a wider range of perspectives and information related to the claim being fact-checked while being grounded with the query provided.
+We have used $\lambda=0.5$ in our experiments to ensure a good balance between relevance and diversity, allowing the system to provide a comprehensive set of evidence while minimizing redundancy. This setting allows users to explore a wider range of perspectives and information related to the claim being fact-checked while being grounded with the query provided generating the top 10 documents and passing them to the next stage.
 
 This whole pipeline of evidence retrieval will be denoted as 'Dual-RAG Evidence Retrieval' in the flow diagrams in next sections.
 
@@ -534,7 +542,7 @@ For each verification question, the retrieval system constructs queries tailored
     \item \textbf{Multi-retriever search:} If the question is text related, the query is dispatched to the first retrieval pipeline based on the claim text and question and for the image related question, it is dispatched to the second retrieval pipeline based on claim image and question. The retrieved documents for the questions and then passed to the answer generation stage
 \end{enumerate}
 
-The final output of this pipeline is a ranked list of the top 20 most relevant and diverse text evidence passages, along with any image evidence retrieved through LongCLIP's cross-modal search for image related retrieval.
+The final output of this pipeline is a ranked list of the top 10 most relevant and diverse text evidence passages, along with any image evidence retrieved through LongCLIP's cross-modal search for image related retrieval.
 
 \subsubsection{Answer Generation}
 
@@ -585,6 +593,7 @@ As the iterative QA loop progresses across multiple iterations, each question-an
 \section{Claim based Retrieval for QA pair generation}
 \label{section:qa_gen_answering}
 
+In addition to the iterative question generation strategy adopted by Team fv, REVEAL and Xxp ~\cite{Tariq2026Mar}, this work also investigates a claim-based single-pass alternative to assess the trade-off between retrieval depth and error propagation similar to the ones employed by AIC-CTU and VILLAIN ~\cite{Ullrich2026Mar} ~\cite{Jung2026Mar}.
 
 This approach introduces a \textit{Analysis Model} that performs evidence retrieval and QA generation in a single coordinated pass. This section describes the end-to-end pipeline as implemented in the final system, detailing how a multimodal claim is processed from input to a set of diagnostic question-answer pairs.
 
@@ -680,7 +689,7 @@ Documents from the text-only pass appear first, followed by documents from the i
 
 \subsection{Prompt Assembly and QA Generation}
 
-The final prompt is assembled by combining all processed inputs into a structured template that guides the VLM toward producing diagnostic question-answer pairs. The prompt consists of:
+The final prompt is assembled by combining all processed inputs into a structured template that guides the VLM toward producing five diagnostic question-answer pairs. The prompt consists of:
 
 
 The model generates a response with a temperature of 0.5, balancing factual grounding with sufficient diversity in the generated questions. The output is parsed as a JSON array, with validation ensuring that each element contains the required fields.

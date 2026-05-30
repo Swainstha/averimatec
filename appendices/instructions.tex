@@ -1,15 +1,5 @@
-\chapter{Instructions to Compile and Run System}
+\chapter{Instructions to Run System}
 \label{apx:instructions}
-
-\instructions{
-This appendix may contain following:
-%
-\begin{itemize}
-    \item Installation instructions
-    \item Source code / class structure
-    \item More detailed evaluation results
-\end{itemize}
-}
 
 \section{Environment Setup}
 
@@ -56,14 +46,21 @@ If the YAML installation fails due to platform differences, use the spec file:
 
 \begin{verbatim}
 conda create --name vllm --file conda_vllm_packages.txt
-conda activate vllm
 \end{verbatim}
 
-\subsection{Running the Pipeline}
+\subsection{Running the VLLM server}
 
 After activating the environment, the vllm server can be run using:
 
 \begin{verbatim}
+srun -p gpu -w gorina8 --gres=gpu:1 --pty $SHELL
+\end{verbatim}
+
+and after getting access to the server, run the following commands
+
+\begin{verbatim}
+conda activate vllm
+
 vllm serve Qwen/Qwen3-VL-8B-Instruct \
   --tensor-parallel-size 1 \
   --max-model-len 32768 \
@@ -73,6 +70,32 @@ vllm serve Qwen/Qwen3-VL-8B-Instruct \
   --port 8005
 \end{verbatim}
 
+\subsection{Running the pipeline using Iterative Question-Answer generation}
+
+For running the pipeline using the Ground Truth questions, we need to set GT\_EVID=True and GT\_QUES=True in \begin{verbatim}run_with_vllm_splade_bge_longclip_icl_qwen_iterative.sh\end{verbatim}
+
+and get access to a gpu server using
 \begin{verbatim}
-bash run_with_vllm_splade_clip_icl_qwen.sh
+srun -p gpu -w gorina8 --gres=gpu:1 --pty $SHELL
+\end{verbatim}
+
+and run 
+
+\begin{verbatim}
+./run_with_vllm_splade_clip_icl_qwen_iterative.sh
+\end{verbatim}
+
+If we want the VLM to generate the questions we can set GT\_EVID=False and GT\_QUES=False
+
+\subsection{Running the pipeline using claim based retreival in Question-Answer generation}
+
+Fet access to a gpu server using
+\begin{verbatim}
+srun -p gpu -w gorina8 --gres=gpu:1 --pty $SHELL
+\end{verbatim}
+
+and run 
+
+\begin{verbatim}
+./run_with_vllm_splade_clip_icl_qwen.sh
 \end{verbatim}
