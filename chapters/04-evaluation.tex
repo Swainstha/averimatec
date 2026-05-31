@@ -69,18 +69,18 @@ The knowledge store exhibits extreme variance in document length. Text documents
 \centering
 \caption{Knowledge store document statistics per split and modality.}
 \label{tab:doc_stats}
+\resizebox{\textwidth}{!}{
 \begin{tabular}{llrrrr}
 \hline
 \textbf{Split} & \textbf{Source} & \textbf{Documents} & \textbf{Min Words} & \textbf{Max Words} & \textbf{Mean Words} \\
 \hline
 Validation & Text     & 99,452  & 1 & 2,441,583 & 5,763 \\
 Validation & Image    & 1,953   & 1 & 31,545    & 585   \\
-Validation & External & 2,371   & 0 & 31,545    & 482   \\
 Test       & Text     & 503,006 & 1 & 2,893,192 & 5,214 \\
 Test       & Image    & 7,814   & 1 & 51,689    & 561   \\
-Test       & External & 9,717   & 0 & 51,689    & 451   \\
 \hline
 \end{tabular}
+}
 \end{table}
 
 \begin{figure}[ht]
@@ -306,6 +306,7 @@ To answer \textbf{RQ1}, we perform an incremental ablation study on the retrieva
 \centering
 \caption{Retrieval ablation results on the validation set with ground truth questions.}
 \label{tab:retrieval_ablation}
+\resizebox{\textwidth}{!}{
 \begin{tabular}{lccccc}
 \hline
 \textbf{Retrieval Type} & \textbf{\makecell{Evidence\\Score}} & \textbf{\makecell{Verdict\\Score}} & \textbf{\makecell{Justification\\Score}} & \textbf{\makecell{Evidence\\Verdict}} & \textbf{\makecell{Evidence\\Justification}}\\
@@ -319,6 +320,7 @@ With Cross Encoder        & 0.42 & 0.664 & 0.41 & 0.40 & 0.32 \\
 \textbf{With MMR}                  & \textbf{0.45} & \textbf{0.71} & \textbf{0.44} & \textbf{0.46} & \textbf{0.35} \\
 \hline
 \end{tabular}
+}
 \end{table}
 
 Several observations emerge from this ablation. First, SPLADE alone outperforms BGE on evidence score (0.34 vs.\ 0.24), confirming the importance of learned sparse lexical matching for fact-checking where exact entity and keyword overlap is critical. The combination of SPLADE+BGE does not improve evidence score over SPLADE alone, but yields a modest gain in justification score (0.33 vs.\ 0.30), suggesting that dense retrieval contributes complementary semantic information useful for generating justifications.
@@ -362,29 +364,34 @@ Table~\ref{tab:icl_ablation} shows the iterative approach on the validation set,
 \centering
 \caption{Iterative QA generation pipeline performance on the validation set.}
 \label{tab:icl_ablation}
+\resizebox{\textwidth}{!}{
 \begin{tabular}{lcccccc}
 \hline
 \textbf{\makecell{In-context \\Learning}} & \textbf{\makecell{Question\\ Score}} & \textbf{\makecell{Evidence\\ Score}} & \textbf{\makecell{Verdict\\Score}} & \textbf{\makecell{Justification\\ Score}} & \textbf{\makecell{Evidence\\ Verdict}} & \textbf{\makecell{Evidence\\Justification}} \\
 \hline
 No  & 0.18 & 0.16 & 0.704 & 0.336 & 0.236 & 0.157 \\
-Yes & 0.34 & 0.214 & 0.724 & 0.363  & 0.26 & 0.19 \\
+\textbf{Yes} & \textbf{0.34} & \textbf{0.214} & \textbf{0.724} & \textbf{0.363}  & \textbf{0.26} & \textbf{0.19} \\
 \hline
 \end{tabular}
+}
 \end{table}
 
 \begin{table}[ht]
 \centering
 \caption{Single pass QA generation pipeline performance on the validation set.}
 \label{tab:one_go_val}
+\resizebox{\textwidth}{!}{
 \begin{tabular}{lcccccc}
 \hline
 \textbf{\makecell{In-context \\Learning}} & \textbf{\makecell{Question\\ Score}} & \textbf{\makecell{Evidence\\ Score}} & \textbf{\makecell{Verdict\\Score}} & \textbf{\makecell{Justification\\ Score}} & \textbf{\makecell{Evidence\\ Verdict}} & \textbf{\makecell{Evidence\\Justification}} \\
 \hline
-No  & 0.35 & 0.237 & 0.81 & 0.42 & 0.29 & 0.22 \\
+\textbf{No}  & \textbf{0.35} & \textbf{0.237} & \textbf{0.81} & \textbf{0.42} & \textbf{0.29} & \textbf{0.22} \\
 Yes & 0.4 & 0.23 & 0.77 & 0.37  & 0.28 & 0.22 \\
 \hline
 \end{tabular}
+}
 \end{table}
+
 
 Comparing the best configuration of each strategy (iterative with ICL vs.\ single pass without ICL), the single-pass approach substantially outperforms iterative generation across all metrics: question score (0.35 vs.\ 0.34), evidence score (0.237 vs.\ 0.214), verdict score (0.81 vs.\ 0.72), and justification score (0.42 vs.\ 0.363).
 
@@ -401,7 +408,7 @@ On the test set (Table~\ref{tab:one_go_test}), the single approach with ICL achi
 \textbf{\makecell{In-context \\Learning}} & \textbf{\makecell{Question\\ Score}} & \textbf{\makecell{Evidence\\ Score}} & \textbf{\makecell{Verdict\\Score}} & \textbf{\makecell{Justification\\ Score}} \\
 \hline
 No  & 0.634 & 0.277 & 0.289 & 0.265\\
-Yes & 0.622 & 0.312 & 0.327 & 0.297\\
+\textbf{Yes} & \textbf{0.622} & \textbf{0.312} & \textbf{0.327} & \textbf{0.297}\\
 \hline
 \end{tabular}
 \end{table}
@@ -445,12 +452,12 @@ To answer \textbf{RQ4}, we compare our best pipeline configuration against the t
 \label{tab:team_comparison_val}
 \begin{tabular}{lcccc}
 \hline
-\textbf{Team} & \textbf{Question Score} & \textbf{Evidence Score} & \textbf{Verdict Score} & \textbf{Justification Score} \\
+\textbf{Team} & \textbf{\makecell{Question\\Score}} & \textbf{\makecell{Evidence\\Score}} & \textbf{\makecell{Verdict\\Score}} & \textbf{\makecell{Justification\\Score}} \\
 \hline
 VILLAIN  & 0.9228 & 0.5832 & 0.6447 & 0.5427 \\
 ADA-AGGR  & 0.3539 & 0.3864 & 0.4539 & 0.3727 \\
 AIC CTU    & 0.8223 & 0.3466 & 0.375 & 0.3035 \\
-\textbf{Ours}     & \textbf{0.35} & \textbf{0.237} & \textbf{0.81} & \textbf{0.42} \\
+\textbf{Single-pass No-Icl (Ours)}     & \textbf{0.35} & \textbf{0.237} & \textbf{0.81} & \textbf{0.42} \\
 Xxp        & 0.3729 & 0.2227  & 0.2303 & 0.175 \\
 fv         & 0.4299 & 0.1614 & 0.1645 & 0.1179 \\
 Baseline & 0.4882 & 0.1335 & 0.0658 & 0.0576 \\
@@ -459,18 +466,21 @@ Baseline & 0.4882 & 0.1335 & 0.0658 & 0.0576 \\
 \end{tabular}
 \end{table}
 
+The final validation score used to compare to other frameworks in validation set is a single pass question-answer generation with no in-context learning.
+
+The final system configuration, consisting of hybrid multimodal dual-branch  retrieval, single-pass question-answer generation, and in-context learning, is referred to as HyMFact and is used for all official test-set comparisons.
 \begin{table}[ht]
 \centering
 \caption{Comparison with other teams on the test set.}
 \label{tab:team_comparison_test}
 \begin{tabular}{lcccc}
 \hline
-\textbf{Team} & \textbf{Question Score} & \textbf{Evidence Score} & \textbf{Verdict Score} & \textbf{Justification Score} \\
+\textbf{Team} & \textbf{\makecell{Question\\Score}} & \textbf{\makecell{Evidence\\Score}} & \textbf{\makecell{Verdict\\Score}} & \textbf{\makecell{Justification\\Score}} \\
 \hline
 VILLAIN  & 0.8897 & 0.5358 & 0.5455 & 0.5557 \\
 ADA-AGGR   & 0.3701 & 0.4629 & 0.5369 & 0.4331 \\
 AIC-CTU   & 0.8065 & 0.3251 & 0.3466 & 0.3043 \\
-\textbf{Ours Best}     & \textbf{0.622} & \textbf{0.312} & \textbf{0.327} & \textbf{0.297} \\
+\textbf{HyMFact (Ours)}     & \textbf{0.622} & \textbf{0.312} & \textbf{0.327} & \textbf{0.297} \\
 Xxp         & 0.3902 & 0.2703 & 0.2557 & 0.198 \\
 REVEAL      & 0.6317 & 0.2771 & 0.2358 & 0.1348 \\
 fv          & 0.2885 & 0.1626 & 0.1591 & 0.1306 \\
