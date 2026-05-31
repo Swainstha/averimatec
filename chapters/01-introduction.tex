@@ -41,10 +41,10 @@ We address the problem by designing an end-to-end multimodal fact-checking pipel
 The specific contributions of this thesis are:
 
 \begin{itemize}
-    \item A hybrid multimodal dual-branch retrieval architecture: for text-related retrieval, SPLADE+BGE are fused and refined (SPLADE+BGE $\rightarrow$ RRF $\rightarrow$ Deduplication $\rightarrow$ cross-encoder $\rightarrow$ MMR), while for image-related retrieval, LongCLIP is refined through rank fusion and diversification (LongCLIP $\rightarrow$ Deduplication $\rightarrow$ MMR). This architecture demonstrates that LongCLIP provides a 29\% improvement in evidence score over standard CLIP and that MMR diversification yields significant gain in all metrics.
+    \item A hybrid multimodal dual-branch retrieval architecture: for text-related retrieval, SPLADE+BGE are fused and refined (SPLADE+BGE $\rightarrow$ RRF $\rightarrow$ Deduplication $\rightarrow$ cross-encoder $\rightarrow$ MMR), while for image-related retrieval, LongCLIP is refined through deduplication and diversification (LongCLIP $\rightarrow$ Deduplication $\rightarrow$ MMR). This architecture demonstrates that LongCLIP provides a 29\% improvement in evidence score over standard CLIP and that MMR diversification yields significant gain in all metrics.
     \item A systematic comparison of iterative versus claim based retrieval (single pass) for QA generation strategies for retrieval-augmented fact-checking, showing that single pass approach outperforms iterative approaches by avoiding error propagation.
     \item An empirical analysis of in-context learning effects that reveals a generalization gap: ICL reduces validation accuracy but improves test performance, exposing majority-class bias in small imbalanced evaluation sets.
-    \item A competitive open-source fact-checking system evaluated on the AVerImaTeC shared task, demonstrating competitive test-set performance using significantly fewer computational resources than proprietary MLLM-based systems.
+    \item A competitive open-source fact-checking system evaluated on the AVerImaTeC shared task, demonstrating competitive test-set performance using significantly fewer computational resources than proprietary Multimodal Large Language Model (MLLM)-based systems.
 \end{itemize}
 
 \section{Outline}
@@ -53,7 +53,7 @@ The specific contributions of this thesis are:
 
 The remainder of this thesis is organized as follows:
 
-\textbf{Chapter~\ref{ch:relatedWork}} reviews related work in automated fact-checking, multimodal misinformation detection, retrieval-augmented generation, and different retrieval models that form the basis of our pipeline. This establishes the theoretical and methodological context for our approach.
+\textbf{Chapter~\ref{ch:relatedWork}} reviews related work in automated fact-checking, multimodal misinformation detection, retrieval-augmented generation, different retrieval models, post retrieval mehtods and fact verification strategies that form the basis of our pipeline. This establishes the theoretical and methodological context for our approach.
 
 \textbf{Chapter~\ref{ch:approach}} presents the proposed pipeline in detail, covering the hybrid multimodal retrieval architecture, indexing strategies, question generation approaches (iterative and claim based retrieval for QA generation i.e. single pass), answer extraction, and verdict prediction with justification generation.
 

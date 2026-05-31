@@ -3,7 +3,7 @@
 
 \section{Environment Setup}
 
-The system requires a VLLM server to serve the MLLM. It uses a Conda environment with specific packages. The environment configuration is provided as a YAML file (\texttt{environment\_vllm.yml}).
+The system requires a VLLM server to serve the VLM. It uses a Conda environment with specific packages. The environment configuration is provided as a YAML file (\texttt{environment\_vllm.yml}).
 The VLLm server was run on an A100 40GB GPU with driver version - and cuda version - 13.0
 
 \subsection{Prerequisites}
@@ -82,14 +82,14 @@ srun -p gpu -w gorina8 --gres=gpu:1 --pty $SHELL
 and run 
 
 \begin{verbatim}
-./run_with_vllm_splade_clip_icl_qwen_iterative.sh
+run_with_vllm_splade_bge_longclip_icl_qwen_iterative.sh
 \end{verbatim}
 
 If we want the VLM to generate the questions we can set GT\_EVID=False and GT\_QUES=False
 
-\subsection{Running the pipeline using claim based retreival in Question-Answer generation}
+\subsection{Running the pipeline using claim based retrieval in Question-Answer generation}
 
-Fet access to a gpu server using
+Get access to a gpu server using
 \begin{verbatim}
 srun -p gpu -w gorina8 --gres=gpu:1 --pty $SHELL
 \end{verbatim}
@@ -97,5 +97,5 @@ srun -p gpu -w gorina8 --gres=gpu:1 --pty $SHELL
 and run 
 
 \begin{verbatim}
-./run_with_vllm_splade_clip_icl_qwen.sh
+run_with_vllm_splade_bge_longclip_icl_qwen.sh
 \end{verbatim}

@@ -106,10 +106,18 @@ The system is evaluated using the official AVerImaTeC shared task evaluation fra
 Verdict prediction is evaluated using exact match accuracy. The predicted verdict label is compared case-insensitively against the ground truth label:
 
 \begin{equation}
-    \text{Verdict\_Acc} = \frac{1}{N} \sum_{i=1}^{N} \mathbb{1}\left[\text{pred}_i.\text{lower()} = \text{gt}_i.\text{lower()}\right]
+\text{VerdictAcc}
+=
+\frac{1}{N}
+\sum_{i=1}^{N}
+\mathds{1}
+\left(
+\hat{y}_i = y_i
+\right)
+\label{eq:verdict_accuracy}
 \end{equation}
 
-where $N$ is the total number of evaluated claims and $\mathbb{1}[\cdot]$ is the indicator function. This metric ranges from 0 to 1, with 1 indicating perfect classification across all four verdict categories.
+where $N$ is the total number of evaluated claims, $\hat{y}_i$ denotes the predicted verdict for claim $i$, $y_i$ denotes the corresponding ground-truth verdict, and $\mathds{1}(\cdot)$ is the indicator function, which returns 1 when the predicted verdict matches the ground truth and 0 otherwise. This metric ranges from 0 to 1, with 1 indicating perfect classification accuracy.
 
 \subsection{Question Generation Score}
 
@@ -196,8 +204,23 @@ The official AVerImaTeC evaluation introduces two conditional composite metrics 
 The evidence-conditioned verdict score counts a sample's verdict as correct only when the evidence retrieval score exceeds a threshold $\lambda = 0.3$:
 
 \begin{equation}
-    \text{EV\_Score} = \frac{1}{N} \sum_{i=1}^{N} \mathbb{1}\left[\text{Recall}_{E,i} > \lambda\right] \cdot \mathbb{1}\left[\text{pred}_i = \text{gt}_i\right]
+\text{EVScore}
+=
+\frac{1}{N}
+\sum_{i=1}^{N}
+\mathds{1}
+\left(
+R_{E,i} > \lambda
+\right)
+\cdot
+\mathds{1}
+\left(
+\hat{y}_i = y_i
+\right)
+\label{eq:evidence_verdict_score}
 \end{equation}
+
+where $N$ is the total number of evaluated claims, $R_{E,i}$ denotes the evidence recall score for claim $i$, $\lambda$ is the evidence quality threshold, $\hat{y}_i$ denotes the predicted verdict, $y_i$ denotes the ground-truth verdict, and $\mathds{1}(\cdot)$ is the indicator function. The metric assigns a score of 1 only when the predicted verdict is correct and the retrieved evidence exceeds the specified recall threshold. The final score is obtained by averaging over all evaluated claims.
 
 This metric penalizes systems that achieve correct verdicts through lucky guessing rather than through retrieval of relevant evidence. A system that predicts the correct verdict but fails to retrieve supporting evidence (scoring below 0.3 on evidence recall) receives no credit for that sample.
 
@@ -206,8 +229,20 @@ This metric penalizes systems that achieve correct verdicts through lucky guessi
 Similarly, the evidence-conditioned justification score gates the justification recall on evidence quality:
 
 \begin{equation}
-    \text{EJ\_Score} = \frac{1}{N} \sum_{i=1}^{N} \mathbb{1}\left[\text{Recall}_{E,i} > \lambda\right] \cdot \text{Justification\_Recall}_i
+\text{EJScore}
+=
+\frac{1}{N}
+\sum_{i=1}^{N}
+\mathds{1}
+\left(
+R_{E,i} > \lambda
+\right)
+\cdot
+J_i
+\label{eq:evidence_justification_score}
 \end{equation}
+
+where $J_i$ denotes the justification quality score for claim $i$.
 
 This ensures that justification quality is only measured for samples where the system has demonstrated the ability to retrieve relevant evidence, filtering out justifications that may be well-written but not grounded in retrieved facts.
 
