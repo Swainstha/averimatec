@@ -12,7 +12,7 @@ The proposed system decomposes multimodal fact verification into a sequence of r
 
 The first approach follows an \textit{iterative question-answer generation} strategy. The Vision-Language Model (VLM) generates a verification question, retrieves evidence from the multimodal knowledge store, answers the question, and then uses the accumulated evidence to generate subsequent questions. This process continues until pre-defined number of iterations.
 
-The second approach follows \textit{claim based retrieval for QA generation (single pass)} strategy. Relevant evidence is retrieved directly from the claim using the proposed \textit{Dual-RAG} retrieval pipeline. The retrieved evidence is then provided to the VLM, which generates multiple question-answer pairs in a single pass before predicting the final verdict and justification.
+The second approach follows \textit{Claim Based Retrieval for QA generation (single pass)} strategy. Relevant evidence is retrieved directly from the claim using the proposed \textit{Dual-RAG} retrieval pipeline. The retrieved evidence is then provided to the VLM, which generates multiple question-answer pairs in a single pass before predicting the final verdict and justification.
 
 Both approaches utilize the same multimodal retrieval infrastructure consisting of SPLADE, BGE, and LongCLIP retrieval, followed by Reciprocal Rank Fusion (RRF), cross-encoder reranking, and Maximal Marginal Relevance (MMR) diversification. The generated question-answer pairs and supporting evidence are subsequently used by the VLM to produce a verdict and evidence-grounded justification.
 
@@ -56,7 +56,7 @@ Evidence retrieval is a fundamental component of multimodal fact-checking. Given
 
 \end{itemize}
 
-To address these challenges, this thesis proposes a hybrid multimodal dual-branch retrieval architecture. The text retrieval branch combines sparse lexical retrieval (SPLADE) and dense semantic retrieval (BGE), while the image retrieval branch utilizes LongCLIP to retrieve image-related textual evidence through image-text alignment.
+To address these challenges, this thesis proposes a hybrid multimodal dual-branch retrieval architecture. The text retrieval branch combines sparse lexical retrieval (SPLADE) and dense semantic retrieval (BGE), while the image retrieval branch utilizes LongCLIP to retrieve image-related textual and visual evidence through image-text and image-image alignment.
 
 \subsection{Sparse Lexical Retrieval using Splade}
 The system employs SPLADE (Sparse Lexical and Expansion Model), a sparse neural retrieval model that combines exact lexical matching with learned term expansion. Unlike BM25, SPLADE can retrieve evidence containing semantically related terms and paraphrases that do not exactly match the query, helping to reduce vocabulary mismatch while preserving the efficiency and interpretability of sparse retrieval ~\cite{Formal2021Sep}.
@@ -78,7 +78,7 @@ The relevance between a query $q$ and a document $d$ is computed using a sparse 
 \begin{equation}
 \operatorname{score}(q,d)
 =
-\langle s(q),s(d)\rangle
+\langle s(q).s(d)\rangle
 \label{eq:splade_score}
 \end{equation}
 
@@ -132,7 +132,7 @@ The knowledge store in AVerImaTeC contains documents of highly variable length, 
 \label{fig:knowledgestore}
 \end{figure}
 
-The three retrieval systems — BGE, SPLADE, and LongCLIP — differ in their chunking granularity, encoding methodology, and index structure. Table~\ref{tab:chunking_comparison} summarizes these differences.
+The three retrieval systems — BGE, SPLADE, and LongCLIP — differ in their chunking granularity, encoding methodology, and index structure. An overview of the process used to index the knowledge store using these three retrieval systems is shown in Fig~\ref{fig:knowledgestore}. Table~\ref{tab:chunking_comparison} summarizes the differences.
 
 \begin{table}[htbp]
 \centering
@@ -363,7 +363,7 @@ This enables the model to capture fine-grained interactions between claim and ev
 
 Cross-encoders provide a favorable trade-off between retrieval quality and computational cost. Although they are more expensive than first-stage retrievers such as SPLADE and BGE, they are significantly more efficient than using Large Language Models (LLMs) for document reranking while still providing strong relevance estimation capabilities ~\cite{Dejean2024Mar}.
 
-In the proposed pipeline, cross-encoder reranking is applied only to the textual retrieval branch after Reciprocal Rank Fusion (RRF). The image retrieval branch is not reranked because the selected BGE reranker is a text-only model. Instead, image-related evidence retrieved by LongCLIP proceeds directly to the subsequent diversification stages.
+In the proposed pipeline, cross-encoder reranking is applied only to the textual retrieval branch after Reciprocal Rank Fusion (RRF). The image retrieval branch is not reranked because the selected BGE reranker is a text-only model and reranks the documents here based on the claim text which is not suitable to rerank documents retrieved based on the claim image. Instead, image-related evidence retrieved by LongCLIP proceeds directly to the subsequent diversification stages.
 
 \subsection{Maximum Marginal Relevance (MMR)}
 
@@ -390,7 +390,7 @@ where $D$ denotes the set of candidate documents, $S$ denotes the set of previou
 
 In the proposed pipeline, $\lambda=0.5$ was selected to give equal importance to relevance and diversity. This encourages the retrieval of complementary evidence while reducing redundancy among the selected documents. After diversification, the top 10 documents are forwarded to the question-answer generation stage.
 
-The complete retrieval pipeline, consisting of SPLADE, BGE, LongCLIP, Reciprocal Rank Fusion (RRF), Cross-Encoder reranking, and MMR diversification, is referred to as \textit{Dual-RAG Evidence Retrieval} throughout the remainder of this thesis.
+The complete retrieval pipeline, consisting of SPLADE, BGE, LongCLIP, Reciprocal Rank Fusion (RRF), Deduplication, Cross-Encoder reranking, and MMR diversification, is referred to as \textit{Dual-RAG Evidence Retrieval} throughout the remainder of this thesis.
 
 
 
@@ -520,7 +520,7 @@ The conversion process preserves the factual content of the generated answer whi
 The resulting evidence statements are aggregated across all verification questions and combined with any retrieved image evidence to form the final evidence package supplied to the verdict prediction module. Complete prompt templates are provided in Appendix~\ref{ch:appendix_qa_conversion}.
 
 
-\section{Claim based Retrieval for QA pair generation}
+\section{Claim Based Retrieval for QA pair generation}
 \label{section:qa_gen_answering}
 
 In addition to the iterative question generation strategy adopted by Team Factiverse, REVEAL and Xxp ~\cite{Tariq2026Mar}, this work also investigates a claim-based single-pass alternative to assess the trade-off between retrieval depth and error propagation similar to the ones employed by AIC-CTU and VILLAIN ~\cite{Ullrich2026Mar} ~\cite{Jung2026Mar}.
@@ -530,7 +530,7 @@ This approach introduces a \textit{Analysis Model} that performs evidence retrie
 \begin{figure}[ht]
 \centering
 \includegraphics[width=\textwidth]{images/RetrievalQA.pdf}
-\caption{Claim based retrieval for QA pair generation. The green sections are for the retrieval methods, blue sections are for VLM based reasoning and generation and yellow sections are the inputs to the VLM}
+\caption{Claim Based Retrieval for QA pair generation. The green sections are for the retrieval methods, blue sections are for VLM based reasoning and generation and yellow sections are the inputs to the VLM}
 \label{fig:evidenceRetrievalFirst}
 \end{figure}
 
@@ -556,19 +556,8 @@ The image captions are generated as described in section ~\ref{subsection:captio
 
 \subsection{Query Augmentation via Paraphrasing}
 
-To improve retrieval recall, the system generates multiple paraphrases of the original claim text using the VLM:
-
-\begin{equation}
-    \mathcal{P} = f_{\text{VLM}}(c, p_{\text{paraphrase}}, n)
-\end{equation}
-
-where $n = 3$ is the default number of paraphrases generated. Paraphrasing serves to diversify the lexical and semantic representation of the claim, ensuring that retrieval captures evidence that may use different terminology to describe the same event or assertion. The paraphrases are concatenated with the original claim text to form an augmented query:
-
-\begin{equation}
-    q_{\text{aug}} = c \oplus \mathcal{P}
-\end{equation}
-
-where $\oplus$ denotes string concatenation. This augmented query is used in subsequent retrieval passes to maximize coverage across different phrasings of the same factual assertions.
+To improve retrieval recall, the system generates multiple paraphrases of the original claim text using the VLM.
+ Paraphrasing serves to diversify the lexical and semantic representation of the claim, ensuring that retrieval captures evidence that may use different terminology to describe the same event or assertion. The paraphrases are concatenated with the original claim text to form an augmented query. This augmented query is used in subsequent retrieval passes to maximize coverage across different phrasings of the same factual assertions.
 
 \subsection{In-Context Learning Example Selection}
 Similar claim text and their corresponding questions are retrieved from the training examples to provide a guidance for Question generation as described in section \ref{subsection:icl}.
@@ -582,19 +571,11 @@ A key design decision in the pipeline is the use of two separate retrieval passe
 
 The first pass retrieves evidence using only the textual content of the claim and its paraphrases using the first retrieval pipeline defined by green section in Figure ~\ref{fig:rag}:
 
-\begin{equation}
-    \mathcal{E}_{\text{text}} = \text{Retrieve}(q_{\text{aug}}, \emptyset, \emptyset)
-\end{equation}
-
-where the empty sets indicate that no images or captions are provided to the retriever. This pass focuses on identifying textual evidence that is semantically or lexically related to the claim's factual assertions, independent of any visual content. The retrieval passes through the Dual-RAG pipeline (BGE + SPLADE $\rightarrow$ RRF $\rightarrow$ cross-encoder reranking $\rightarrow$ MMR diversification), returning the top-10 most relevant text documents.
+This pass focuses on identifying textual evidence that is semantically or lexically related to the claim's factual assertions, independent of any visual content. The retrieval passes through the Dual-RAG pipeline (BGE + SPLADE $\rightarrow$ RRF $\rightarrow$ cross-encoder reranking $\rightarrow$ MMR diversification), returning the top-10 most relevant text documents.
 
 \subsubsection{Pass 2: Image-Augmented Retrieval}
 
 The second pass incorporates the claim images and their captions using the second retrieval pipeline defined by blue section in Figure ~\ref{fig:rag}:
-
-\begin{equation}
-    \mathcal{E}_{\text{image}} = \text{Retrieve}(\emptyset, \mathcal{I}, \{\text{cap}_1, \ldots, \text{cap}_m\})
-\end{equation}
 
 This pass activates LongCLIP's cross-modal retrieval capabilities, enabling the system to find evidence that is visually similar to the claim images or textually related to the image content and captions. This process returns the top 10 image related text documents along with 3 related images.
 
@@ -615,19 +596,19 @@ Document N+1: [text from image-augmented retrieval]
 ...
 \end{verbatim}
 
-Documents from the text-only pass appear first, followed by documents from the image-augmented pass. This ordering ensures that purely textual evidence is presented prominently, while image-related evidence provides supplementary context. The total number of documents presented to the model is bounded by the combined retrieval top-20 from both passes.
+Documents from the text-only pass appear first, followed by documents from the image-augmented pass. This ordering ensures that purely textual evidence is presented prominently, while image-related evidence provides supplementary context. The total number of documents presented to the model is bounded by the combined retrieval of top-20 from both passes.
 
 \subsection{Prompt Assembly and QA Generation}
 
-The final prompt is assembled by combining all processed inputs into a structured template that guides the VLM toward producing five diagnostic question-answer pairs. The prompt consists of claim text, claim images, captions, ICL examples, claim metadata and the retrieved evidences.
+The final prompt is assembled by combining all processed inputs into a structured template that guides the VLM toward producing five diagnostic question-answer pairs. The prompt consists of claim text, claim images, captions, ICL examples, claim metadata and the retrieved evidences. It can be accessed in Appendix ~\ref{ch:appendix_analysis}.
 
 The model generates a response with a temperature of 0.5, balancing factual grounding with sufficient diversity in the generated questions. The output is parsed as a JSON array, with validation ensuring that each element contains the required fields.
 
-This single-pass architecture differs from the iterative approach described in earlier sections by generating all questions simultaneously with access to pre-retrieved evidence, rather than iteratively conditioning on previous answers. The trade-off is reduced computational cost (fewer VLM calls and retrieval operations) at the potential expense of adaptive question refinement. However, by providing the model with comprehensive evidence upfront, this approach enables the generation of more informed and evidence-grounded questions from the outset.
+This single-pass architecture differs from the iterative approach described in earlier sections by generating all questions simultaneously with access to pre-retrieved evidence, rather than iteratively conditioning on previous answers. The trade-off is reduced computational cost (fewer VLM calls and retrieval operations) at the potential expense of adaptive question refinement. However, by providing the model with comprehensive evidence upfront, this approach enables the generation of more informed and evidence-grounded questions.
 
 \section{Verdict Prediction and Justification Generation}
 
-After all Question-Answer Pair generation is completed for each of the approaches, the accumulated evidence is passed to two final modules: verdict prediction and justification generation. These modules operate sequentially — the predicted verdict is first determined from the evidence, and then a natural language justification is generated to explain the reasoning behind the verdict.
+After Question-Answer Pair generation is completed for each of the approaches, the accumulated evidence is passed to two final modules: verdict prediction and justification generation. These modules operate sequentially — the predicted verdict is first determined from the evidence, and then a natural language justification is generated to explain the reasoning behind the verdict.
 
 \subsection{Verdict Prediction}
 

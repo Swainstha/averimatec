@@ -4,14 +4,13 @@
 \section{Environment Setup}
 
 The system requires a VLLM server to serve the VLM. It uses a Conda environment with specific packages. The environment configuration is provided as a YAML file (\texttt{environment\_vllm.yml}).
-The VLLm server was run on an A100 40GB GPU with driver version - and cuda version - 13.0
+The VLLM server was run on an A100 40GB GPU with cuda version - 13.0
 
 \subsection{Prerequisites}
 
 \begin{itemize}
     \item Conda (Miniconda or Anaconda) installed on the system.
     \item NVIDIA GPU with CUDA support (A100 40GB or 80GB recommended).
-    \item Linux operating system (tested on Ubuntu).
 \end{itemize}
 
 \subsection{Installation Steps}
@@ -19,8 +18,7 @@ The VLLm server was run on an A100 40GB GPU with driver version - and cuda versi
 \begin{enumerate}
     \item \textbf{Clone the repository:}
 \begin{verbatim}
-git clone <repository-url>
-cd Project
+git clone https://github.com/factiverse/msc-thesis-2026-averimatec
 \end{verbatim}
 
     \item \textbf{Create the Conda environment from the YAML file:}
@@ -87,7 +85,7 @@ run_with_vllm_splade_bge_longclip_icl_qwen_iterative.sh
 
 If we want the VLM to generate the questions we can set GT\_EVID=False and GT\_QUES=False
 
-\subsection{Running the pipeline using claim based retrieval in Question-Answer generation}
+\subsection{Running the pipeline using Claim Based Retrieval in Question-Answer generation}
 
 Get access to a gpu server using
 \begin{verbatim}

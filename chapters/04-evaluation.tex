@@ -1,16 +1,11 @@
 \chapter{Experimental Evaluation}
 \label{ch:eval}
 
-This chapter first presents the experimental setup. Next, the results and answers to the
-RQs are discussed. Lastly, more analysis is done, looking at the success and failure cases
-of a model.
+This chapter presents the experimental evaluation of the proposed fact-checking pipeline. It begins by describing the experimental setup and evaluation methodology. The chapter then presents the experimental results and discusses the research questions introduced in Chapter~\ref{ch:intro}. Finally, a discussion is presented along with qualitative examples and error analysis.
 
 \section{Experimental Setup}
-This section covers the experimental setup. The datasets are described, followed by
-relevant metrics and evaluation methodology.
-The experiments were run on the GPUs provided by the UNIX servers at the University
-of Stavanger. The GPU types used for testing our pipeline were A100 40GB and A100 80GB.
-Slurm was used to run the jobs.
+This section covers the experimental setup. The datasets are described, followed by relevant metrics.
+All experiments were conducted on the University of Stavanger's UNIX computing infrastructure. Model indexing, retrieval, and inference were performed using NVIDIA A100 GPUs with 40GB and 80GB of GPU memory. GPU resources were accessed through the Slurm cluster management system.
 
 \subsection{Datasets}
 
@@ -61,9 +56,9 @@ Total                                & 793 & 152 & 352 \\
 
 \subsubsection{Knowledge Store}
 
-Each claim is associated with a knowledge store containing pre-collected documents from which evidence must be retrieved. The knowledge store is organized into three modalities: (1)~\textit{Text} documents, consisting of web pages retrieved by search engines for the claim; (2)~\textit{Image} documents, consisting of text extracted from web pages found via reverse image search on the claim image; and (3)~\textit{Image} documents, consisting of images through reverse image search. Table~\ref{tab:doc_stats} presents the document statistics.
+Each claim is associated with a knowledge store containing pre-collected documents from which evidence must be retrieved. The knowledge store is organized into three modalities: (1)~\textit{Text} documents, consisting of web pages retrieved by search engines for the claim text; (2)~\textit{Image} documents, consisting of text extracted from web pages found via reverse image search on the claim image; and (3)~\textit{Image} documents, consisting of images through reverse image search. Table~\ref{tab:doc_stats} presents the document statistics.
 
-The knowledge store exhibits extreme variance in document length. Text documents range from a single word to over 2.4 million words, with a mean of approximately 5,700 words. This high variance necessitates document chunking strategies during retrieval indexing. The test split is substantially larger than the validation split, containing over 500,000 text documents compared to approximately 100,000 in validation, making efficient retrieval critical.
+The knowledge store exhibits extreme variance in document length. Text documents in the validation set range from a single word to over 2.4 million words, with a mean of approximately 5,700 words. This high variance necessitates document chunking strategies during retrieval indexing. The test split is substantially larger than the validation split, containing over 500,000 text documents compared to approximately 100,000 in validation, making efficient retrieval critical. However image related text documents for both sets are significantly smaller than the claim text related documents.
 
 \begin{table}[ht]
 \centering
@@ -270,6 +265,8 @@ Evidence-Justification & Conditional & Justification recall gated on evidence $>
 
 All VLM-based evaluations (question generation, evidence retrieval, and justification) use an evaluator model that scores semantic equivalence rather than lexical overlap, ensuring that systems are not penalized for valid paraphrases or alternative phrasings that convey the same factual content.
 
+Validation-set experiments were evaluated locally using Qwen3-VL-8B-Instruct as the evaluation model. For the test set, predictions were submitted to the official AVerImaTeC evaluation server, which computed the final benchmark scores on the hidden test data. Unless otherwise stated, validation results refer to locally computed scores, while test results correspond to the official competition evaluation.
+
 \subsection{Evaluation Protocol}
 
 We used the validation and test datasets for evaluation following a two-stage protocol. First, the validation set (152 claims) was used for iterative development and ablation studies. All six metrics were monitored across experiments to ensure that pipeline modifications led to consistent improvements and did not cause regressions. Second, the test set (352 claims) was used for final evaluation on completely unseen data, with scores computed by the official competition server. This two-stage approach ensures that results on the test set reflect genuine generalization rather than overfitting to a particular data split.
@@ -277,7 +274,7 @@ We used the validation and test datasets for evaluation following a two-stage pr
 \section{Experimental Results}
 This section presents the experimental results. The results are organized according to the research questions (RQs) defined in the introduction. For each RQ, we present the relevant results and provide an analysis of the findings.
 
-Table~\ref{tab:hyperparams} lists the key hyperparameters used in the pipeline. These values were selected through empirical tuning on the validation set. Lower temperatures (0.2) were used for verdict and justification generation to maximize determinism and factual consistency, while a moderate temperature (0.5) was used for QA generation to encourage diverse question. The MMR diversity parameter $\lambda = 0.5$ provides an equal balance between relevance and diversity in the final evidence set. The RRF constant $K = 60$ follows the standard recommendation from the original RRF formulation~\cite{Rackauckas2024Jan}, which controls the diminishing influence of lower-ranked documents. Top-$K = 50$ was chosen to provide sufficient retrieval recall while keeping the computational cost of downstream reranking manageable.
+Table~\ref{tab:hyperparams} lists the key hyperparameters used in the pipeline. Lower temperatures (0.2) were used for verdict and justification generation to maximize determinism and factual consistency, while a moderate temperature (0.5) was used for QA generation to encourage diverse question. The MMR diversity parameter $\lambda = 0.5$ provides an equal balance between relevance and diversity in the final evidence set. The RRF constant $K = 60$ follows the standard recommendation ~\cite{Cormack2009Jul}, which controls the diminishing influence of lower-ranked documents. Top-$K = 50$ was chosen to provide sufficient retrieval recall while keeping the computational cost of downstream reranking manageable.
 
 \begin{table}[ht]
 \centering
@@ -327,7 +324,7 @@ Several observations emerge from this ablation. First, SPLADE alone outperforms 
 
 Second, adding standard CLIP to the hybrid retriever actually decreases evidence score from 0.34 to 0.31. This is attributable to CLIP's 77-token text limit, which causes it to focus on superficial image-text alignment rather than the longer contextual evidence needed for fact verification. Replacing CLIP with LongCLIP produces a substantial improvement across all metrics: evidence score increases from 0.31 to 0.40 (+29\%), and evidence-conditioned verdict score increases from 0.29 to 0.40. This validates the hypothesis that long-context visual grounding is essential for multimodal fact-checking.
 
-Third, the post-retrieval stages provide further gains. Cross-encoder reranking improves evidence score from 0.40 to 0.42 by refining the ranking quality through full query-document interaction. The most significant single-stage improvement comes from MMR diversification, which raises the evidence score from 0.42 to 0.45 and the verdict score from 0.66 to 0.71. This demonstrates that reducing redundancy in the retrieved evidence set allows the VLM to reason over a more comprehensive set of facts, directly improving downstream verdict accuracy. Figure~\ref{fig:confusion_matrix_mmr} visualizes this effect through confusion matrices, showing that MMR improves verdict accuracy from 66.4\% to 71\%, primarily by correctly classifying more \textit{Refuted} claims.
+Third, the post-retrieval stages provide further gains. Cross-encoder reranking improves evidence score from 0.40 to 0.42 by refining the ranking quality through full query-document interaction. The most significant single-stage improvement comes from MMR diversification, which raises the evidence score from 0.42 to 0.45 and the verdict score from 0.664 to 0.71. This demonstrates that reducing redundancy in the retrieved evidence set allows the VLM to reason over a more comprehensive set of facts, directly improving downstream verdict accuracy. Figure~\ref{fig:confusion_matrix_mmr} visualizes this effect through confusion matrices, showing that MMR improves verdict accuracy from 66.4\% to 71\%, primarily by correctly classifying more \textit{Refuted} claims.
 
 \begin{figure}[ht]
 \centering
@@ -354,9 +351,9 @@ SPLADE+BGE+CLIP  & 0.486 & 0.173 & 0.176 & 0.154  \\
 \end{tabular}
 \end{table}
 
-\subsection{RQ2: How does iterative question-answer generation compare to a claim based retrieval for QA generation in terms of evidence quality and verdict accuracy?}
+\subsection{RQ2: How does iterative question-answer generation compare to a Claim Based Retrieval (single pass) for QA generation in terms of evidence quality and verdict accuracy?}
 
-To answer \textbf{RQ2}, we compare two QA generation strategies: (1)~iterative question generation, where questions are generated iteratively followed by evidence retrieval and answer generation ; and (2)claim based retrieval for QA generation (single pass), where all questions and answers are generated in a single VLM call after retrieving evidence. Both configurations use the full retrieval pipeline (SPLADE+BGE+LongCLIP+Cross-Encoder+MMR).
+To answer \textbf{RQ2}, we compare two QA generation strategies: (1)~iterative question generation, where questions are generated iteratively followed by evidence retrieval and answer generation ; and (2)Claim Based Retrieval for QA generation (single pass), where all questions and answers are generated in a single VLM call after retrieving evidence. Both configurations use the full retrieval pipeline (SPLADE+BGE+LongCLIP+Cross-Encoder+MMR).
 
 Table~\ref{tab:icl_ablation} shows the iterative approach on the validation set, while Table~\ref{tab:one_go_val} shows the single pass approach.
 
@@ -395,9 +392,11 @@ Yes & 0.4 & 0.23 & 0.77 & 0.37  & 0.28 & 0.22 \\
 
 Comparing the best configuration of each strategy (iterative with ICL vs.\ single pass without ICL), the single-pass approach substantially outperforms iterative generation across all metrics: question score (0.35 vs.\ 0.34), evidence score (0.237 vs.\ 0.214), verdict score (0.81 vs.\ 0.72), and justification score (0.42 vs.\ 0.363).
 
-This result suggests that generating all questions and answers in a single coherent pass after evidence retrieval allows the VLM to maintain better contextual consistency and produce more holistic verification reasoning. The iterative approach, while theoretically allowing refinement across iterations, appears to suffer from error propagation—poor early questions lead to irrelevant evidence retrieval, which in turn degrades subsequent question generation.
+On the test set (Table~\ref{tab:one_go_test}), the single pass approach with ICL achieves a question score of 0.622, evidence score of 0.312, verdict score of 0.327, and justification score of 0.297—representing our best test set submission.
 
-On the test set (Table~\ref{tab:one_go_test}), the single approach with ICL achieves a question score of 0.622, evidence score of 0.312, verdict score of 0.327, and justification score of 0.297—representing our best test set submission. Notably, ICL improves all metrics on the test set despite hurting validation performance, suggesting that the few-shot examples provide better generalization to unseen claims even when they constrain validation-set verdict accuracy.
+Comparing it with the scores (with LongCLIP) of iterative approach of test set from Table ~\ref{tab:retrieval_ablation_test}, the single-pass approach consistently outperforms the iterative approach across all evaluation metrics. Question score increases from 0.495 to 0.622 (+25.7\%), evidence score from 0.224 to 0.312 (+39.3\%), verdict score from 0.230 to 0.327 (+42.2\%), and justification score from 0.170 to 0.297 (+74.7\%).
+
+This results suggest that generating all questions and answers in a single coherent pass after evidence retrieval allows the VLM to maintain better contextual consistency and produce more holistic verification reasoning. The iterative approach, while theoretically allowing refinement across iterations, appears to suffer from error propagation—poor early questions lead to irrelevant evidence retrieval, which in turn degrades subsequent question generation.
 
 \begin{table}[ht]
 \centering
@@ -459,7 +458,7 @@ ADA-AGGR  & 0.3539 & 0.3864 & 0.4539 & 0.3727 \\
 AIC CTU    & 0.8223 & 0.3466 & 0.375 & 0.3035 \\
 \textbf{Single-pass No-Icl (Ours)}     & \textbf{0.35} & \textbf{0.237} & \textbf{0.81} & \textbf{0.42} \\
 Xxp        & 0.3729 & 0.2227  & 0.2303 & 0.175 \\
-fv         & 0.4299 & 0.1614 & 0.1645 & 0.1179 \\
+fv(Factiverse)         & 0.4299 & 0.1614 & 0.1645 & 0.1179 \\
 Baseline & 0.4882 & 0.1335 & 0.0658 & 0.0576 \\
 
 \hline
@@ -468,7 +467,6 @@ Baseline & 0.4882 & 0.1335 & 0.0658 & 0.0576 \\
 
 The final validation score used to compare to other frameworks in validation set is a single pass question-answer generation with no in-context learning.
 
-The final system configuration, consisting of hybrid multimodal dual-branch  retrieval, single-pass question-answer generation, and in-context learning, is referred to as HyMFact and is used for all official test-set comparisons.
 \begin{table}[ht]
 \centering
 \caption{Comparison with other teams on the test set.}
@@ -483,17 +481,21 @@ AIC-CTU   & 0.8065 & 0.3251 & 0.3466 & 0.3043 \\
 \textbf{HyMFact (Ours)}     & \textbf{0.622} & \textbf{0.312} & \textbf{0.327} & \textbf{0.297} \\
 Xxp         & 0.3902 & 0.2703 & 0.2557 & 0.198 \\
 REVEAL      & 0.6317 & 0.2771 & 0.2358 & 0.1348 \\
-fv          & 0.2885 & 0.1626 & 0.1591 & 0.1306 \\
-Baseline & 0.2885 & 0.1707 & 0.1591 & 0.1306 \\
+fv(Factiverse)        & 0.2885 & 0.1626 & 0.1591 & 0.1306 \\
+Baseline & 0.5545 & 0.1707 & 0.1136 & 0.1322 \\
 \hline
 \end{tabular}
 \end{table}
 
-On the validation set, our system achieves the highest verdict score (0.81) among all teams, substantially outperforming the first-place HUMANE system (0.6447) by over 16 percentage points. This demonstrates that our hybrid retrieval pipeline combined with single-pass VLM reasoning produces highly accurate verdict predictions when evaluated locally. Our justification score (0.42) also exceeds all systems except VILLAIN.
+On the validation set, our system achieves the highest verdict score (0.81) among all teams, substantially outperforming the first-place VILLAIN system (0.6447) by over 16 percentage points. This demonstrates that our hybrid retrieval pipeline combined with single-pass VLM reasoning produces highly accurate verdict predictions when evaluated locally. Our justification score (0.42) also exceeds all systems except VILLAIN.
 
 However, our question score (0.35) and evidence score (0.237) are lower than most competing systems. This gap is primarily attributable to two factors: (1)~our use of a smaller VLM (Qwen3-VL-8B) compared to the proprietary MLLMs used by other teams (GPT-5.1, Gemini-2.5-Pro), which limits question generation diversity; and (2)~we generate fewer questions (5) than other teams.
 
-On the test set, the performance gap between validation and test is notable: our best verdict score drops from 0.81 (validation, without ICL) to 0.327 (test, with ICL). This discrepancy suggests that the high validation verdict accuracy is partially inflated by the extreme class imbalance (90\% Refuted), and the test set likely contains a more balanced label distribution. Notably, our best test configuration uses ICL, which achieves lower validation scores but generalizes better. Despite the val-to-test gap, our system outperforms the baseline across all metrics and achieves competitive evidence and justification scores relative to the proprietary MLLM-based systems, while using significantly fewer computational resources (a single 8B-parameter open-source VLM vs.\ multiple calls to commercial MLLMs).
+The final system configuration, consisting of hybrid multimodal dual-branch  retrieval, single-pass question-answer generation, and in-context learning, is referred to as HyMFact (Hybrid Multimodal Fact Checker) and is used for all official test-set comparisons.
+
+On the test set, the performance gap between validation and test is notable: our best verdict score drops from 0.81 (validation, without ICL) to 0.327 (test, with ICL). This discrepancy suggests that the high validation verdict accuracy is partially inflated by the extreme class imbalance (90\% Refuted), and the test set likely contains a more balanced label distribution. Notably, our best test configuration uses ICL, which achieves lower verdict scores but generalizes better. Despite the val-to-test gap, our system outperforms the baseline across all metrics and achieves competitive evidence and justification scores relative to the proprietary MLLM-based systems, while using significantly fewer computational resources (a single 8B-parameter open-source VLM vs.\ multiple calls to commercial MLLMs).
+
+HyMFact substantially improves upon the Factiverse baseline across all evaluation metrics. Question score increases from 0.2885 to 0.622, evidence score from 0.1626 to 0.312, verdict score from 0.1591 to 0.327, and justification score from 0.1306 to 0.297. This corresponds to relative improvements of 115.6\%, 91.9\%, 105.5\%, and 127.4\%, respectively. These gains demonstrate the effectiveness of the proposed retrieval enhancements, evidence reranking and diversification stages, and the transition from the original iterative framework to the final single-pass question-answer generation strategy.
 
 \section{Discussion}
 \label{sec:discussion}
@@ -512,7 +514,7 @@ A key design decision in our pipeline is the use of Qwen3-VL-8B-Instruct, an ope
 
 \begin{itemize}
     \item \textbf{Advantages:} Full reproducibility, no API costs, ability to run locally on a single A100 GPU, no rate limiting, and complete control over inference parameters.
-    \item \textbf{Disadvantages:} Lower question generation diversity (0.622 vs.\ 0.890 for VILLAIN), reduced capacity for complex multi-hop reasoning, and smaller context window limiting the amount of evidence that can be processed simultaneously.
+    \item \textbf{Disadvantages:} Lower question generation diversity (0.622 vs.\ 0.8897 for VILLAIN), reduced capacity for complex multi-hop reasoning, and smaller context window limiting the amount of evidence that can be processed simultaneously.
 \end{itemize}
 
 Despite these limitations, our system achieves competitive verdict and justification performance, demonstrating that a well-designed retrieval pipeline can partially compensate for a smaller reasoning model. The evidence score gap (0.312 vs.\ 0.536) suggests that retrieval quality, rather than model size alone, is a significant differentiator.
@@ -593,7 +595,6 @@ To illustrate the effect of MMR-based re-ranking on evidence quality, we examine
 \textbf{Component} & \textbf{Without MMR (Run 174)} & \textbf{With MMR (Run 175)} \\
 \midrule
 Q1 Answer & Vandana Tiwari \textcolor{red}{(\ding{55})} & Rita Garg \textcolor{green}{(\ding{51})} \\
-Q2 Answer & No answer found & No answer found \\
 \midrule
 Evidence Score & 0.0 & 1.0 \\
 Verdict & Not Enough Evidence \textcolor{red}{(\ding{55})} & Refuted \textcolor{green}{(\ding{51})} \\
@@ -602,7 +603,7 @@ GT Verdict & Refuted & Refuted \\
 \end{tabular}
 \end{table}
 
-Without MMR, the top-ranked retrieved documents were redundant, all referencing the same incorrect source that named Vandana Tiwari as the sister. This led the QA module to extract an incorrect answer, which in turn left insufficient evidence to reach a verdict. With MMR re-ranking, the diversified document set included a BBC News article that correctly identified Rita Garg as the sister, enabling the system to extract the correct answer and produce the correct Refuted verdict.
+Without MMR, the top-ranked retrieved documents were redundant, all referencing the same incorrect source that named Vandana Tiwari as the sister. This led the QA module to extract an incorrect answer, which in turn left insufficient evidence to reach a verdict. With MMR diversification, the diversified document set included a BBC News article that correctly identified Rita Garg as the sister, enabling the system to extract the correct answer and produce the correct Refuted verdict.
 
 \subsection{Failure Case: Knowledge Store Gap}
 
@@ -630,7 +631,7 @@ GT Verdict & Refuted \\
 
 The ground truth reveals that the murder was a domestic crime committed by the victim's husband and brother-in-law---contradicting the claim's framing as a religiously motivated attack. However, the key evidence (the names Mintu Rambrij Singh and Chunchun Rambrij Singh, and their relationship to the victim) is entirely absent from the knowledge store. A manual search through all documents in the claim's knowledge store confirmed that neither name appears in any document.
 
-This represents a hard ceiling on pipeline performance: regardless of retrieval sophistication, the system cannot produce evidence that does not exist in the document collection. The knowledge store was constructed through automated web search at a specific point in time, and niche local news details---particularly those in regional languages---may not have been captured. This failure mode is fundamentally different from retrieval failures, where evidence exists but is not surfaced, and highlights the dependency of closed-domain fact-checking systems on the completeness of their underlying knowledge stores.
+This represents a hard ceiling on pipeline performance: regardless of retrieval sophistication, the system cannot produce evidence that does not exist in the document collection. The knowledge store was constructed through automated web search at a specific point in time, and niche local news details, particularly those in regional languages, may not have been captured. This failure mode is fundamentally different from retrieval failures, where evidence exists but is not surfaced, and highlights the dependency of closed-domain fact-checking systems on the completeness of their underlying knowledge stores.
 
 \subsection{Failure Case: VLM Reasoning Error}
 
@@ -668,7 +669,7 @@ GT Justification & ``The footwear was boycotted in April 2003. American Eagle Ou
 \end{tabular}
 \end{table}
 
-The ground truth verdict is Refuted because the sandals were already withdrawn from the market in April 2003---twenty years before the claim was made. The claim misleadingly presents a resolved historical incident as a current issue requiring action in 2023.
+The ground truth verdict is Refuted because the sandals were already withdrawn from the market in April 2003, twenty years before the claim was made. The claim misleadingly presents a resolved historical incident as a current issue requiring action in 2023.
 
 The VLM's error is a \textbf{temporal miscontextualization failure}. The model correctly identified the underlying facts (the sandals exist, they are offensive, they were recalled) and produced a factually accurate justification (scoring 1.0). However, it failed to recognize the critical temporal dimension: the evidence itself proves the claim is misleading, because the sandals no longer exist in the market. The VLM answered the question ``Are these sandals offensive?'' (yes) rather than the actual verification question ``Do these sandals need to be boycotted in 2023?'' (no---they were removed twenty years ago).
 
@@ -684,7 +685,7 @@ Beyond the individual examples above, we identify a systemic failure pattern tha
 Even when relevant evidence exists in the knowledge store, our retrieval pipeline sometimes fails to surface it within the top-$K$ results. We identify two primary causes:
 
 \begin{itemize}
-    \item \textbf{Vocabulary mismatch:} Claims may use colloquial language, abbreviations, or alternate phrasings that differ from how the evidence is expressed in the knowledge store documents. While SPLADE's learned term expansion partially addresses this, it cannot bridge all lexical gaps---particularly for domain-specific terminology or multilingual claims.
+    \item \textbf{Vocabulary mismatch:} Claims may use colloquial language, abbreviations, or alternate phrasings that differ from how the evidence is expressed in the knowledge store documents. While SPLADE's learned term expansion partially addresses this, it cannot bridge all lexical gaps, particularly for domain-specific terminology or multilingual claims.
     \item \textbf{Long document dilution:} Given the extreme variance in document length (up to 2.4M words), relevant passages may constitute a tiny fraction of a long document. Our chunking strategy mitigates this, but boundary effects can still split critical evidence across chunks, reducing retrieval scores for individual segments.
 \end{itemize}
 
